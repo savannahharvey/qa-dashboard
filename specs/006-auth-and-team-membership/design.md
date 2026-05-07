@@ -7,6 +7,7 @@ type User = {
   id: string;
   username: string;
   displayName?: string;
+  passwordHash?: string;
 };
 
 type Team = {
@@ -26,6 +27,8 @@ type TeamMembership = {
 - Store password hashes only.
 - Keep authentication separate from dashboard rendering.
 - The dashboard should receive a current user and team context after sign-in.
+- The Figma prototype includes an `AuthContext`; implementation should use an auth provider or equivalent boundary to keep auth state out of individual page components.
+- Include sign-in and sign-up pages in the first app scaffold.
 
 ## Team Joining Notes
 

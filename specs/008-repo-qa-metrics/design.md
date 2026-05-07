@@ -38,8 +38,20 @@ Test coverage:
 
 Use sample data first. Later automation can parse test and coverage output from the repo or CI pipeline without changing dashboard display rules.
 
+## Dashboard Display
+
+The team board should summarize QA metrics separately from goal rows so the team can scan quality health before reading individual goals. Goal rows may also reference a QA metric when that metric drives progress.
+
+Recommended summary cards:
+
+- Unit tests.
+- API tests.
+- UI tests.
+- Overall coverage or coverage by category.
+
 ## Testing Notes
 
 - Test passing, failing, and unavailable statuses.
 - Test coverage progress calculation.
 - Test unavailable coverage handling.
+- Test goal progress when driven by a QA metric.

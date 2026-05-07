@@ -4,6 +4,10 @@
 
 Draft
 
+## Spec Type
+
+Domain/data spec. This spec describes QA metric data, status interpretation, coverage rules, and goal progress integration.
+
 ## Summary
 
 Track the first QA metrics for the dashboard: tests passing and test coverage for unit, API, and UI tests in the repo.
@@ -34,3 +38,4 @@ As a team member, I want to see whether our repo tests are passing and how much 
 - The first QA metrics are tests passing and test coverage.
 - Metrics are grouped into unit, API, and UI categories.
 - The dashboard foundation can use sample metrics before repo automation exists.
+- QA metrics should be displayable both as summary dashboard cards and as goal-linked progress signals.

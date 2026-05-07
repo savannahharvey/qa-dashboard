@@ -14,6 +14,7 @@ type Goal = {
   title: string;
   description?: string;
   metricType?: string;
+  testCategory?: "unit" | "api" | "ui";
   currentValue: number;
   targetValue: number;
   unit?: string;
@@ -35,8 +36,29 @@ Individual goals can reference a team goal through `parentGoalId`. Team goals sh
 
 Dates are optional. Status rules should work without `dueDate`.
 
+## Create Goal Flow
+
+The Figma prototype includes a `CreateGoal` page. The first implementation should route goal creation from the dashboard shell and return users to the team board after a successful save.
+
+Create-goal fields:
+
+- Title.
+- Description.
+- Scope: team or individual.
+- Owner.
+- Parent team goal for individual goals.
+- Metric type.
+- Test category when the metric is QA-related.
+- Current value.
+- Target value.
+- Unit.
+- Optional due date.
+
+Validation should live outside the page component so it can be tested directly.
+
 ## Testing Notes
 
 - Test goal ownership validation.
 - Test linking an individual goal to a team goal.
 - Test goals without dates.
+- Test create-goal validation.

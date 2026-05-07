@@ -6,7 +6,7 @@
 - [x] Define tests passing requirements.
 - [x] Define test coverage requirements.
 - [x] Define unit, API, and UI categories.
-- [ ] Decide initial metric source format.
+- [x] Decide initial metric source format.
 - [ ] Decide coverage target defaults.
 
 ## Implementation Tasks
@@ -15,6 +15,7 @@
 - [ ] Add sample unit test metrics.
 - [ ] Add sample API test metrics.
 - [ ] Add sample UI test metrics.
+- [ ] Build QA metric summary cards.
 - [ ] Connect metrics to dashboard goals.
 - [ ] Show unavailable metric state.
 
