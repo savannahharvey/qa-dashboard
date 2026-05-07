@@ -44,6 +44,14 @@ Something preventing progress on a goal.
 
 The main view that summarizes goals, progress, and status for the team.
 
+## Team Board
+
+The authenticated dashboard view that organizes team goals, individual goals, owners, progress, and QA metrics for one team.
+
+## Create Goal
+
+The workflow for adding a new team or individual goal.
+
 ## Tests Passing
 
 A QA metric showing whether a test category is currently passing.

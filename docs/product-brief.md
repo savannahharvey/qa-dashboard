@@ -41,3 +41,7 @@ Team goals can become hard to track when they live in scattered conversations, s
 - A user can tell which goals are active, completed, or at risk.
 - A user can see tests passing and test coverage for unit, API, and UI tests.
 - The project has specs that describe behavior before implementation begins.
+
+## Figma Alignment
+
+The current Figma Make prototype defines the first visible product shape: unauthenticated landing, sign-in, sign-up, protected dashboard, team board, and create-goal views. Specs should preserve those screens as planned implementation surfaces while keeping domain behavior documented in requirements before code is written.

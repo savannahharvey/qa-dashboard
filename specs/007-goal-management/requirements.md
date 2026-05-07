@@ -39,6 +39,17 @@ Acceptance criteria:
 - Given a goal has a due date, when it is displayed, then the date may be shown.
 - Given a goal has no due date, then status calculation does not require one.
 
+### Requirement 5: Create Goal
+
+Signed-in users must be able to create a new goal.
+
+Acceptance criteria:
+
+- Given a signed-in user opens the create-goal view, then they can enter the goal title, scope, owner, metric, current value, target value, and optional due date.
+- Given the new goal is an individual goal, then the user can optionally link it to a team goal.
+- Given required fields are missing, when the user submits the form, then they see clear validation errors.
+- Given a valid goal is submitted, then the goal is saved and can appear on the team board.
+
 ## Non-Functional Requirements
 
 - Goal data should be structured so it can support future editing.

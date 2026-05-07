@@ -4,6 +4,30 @@
 
 Build the first dashboard as a thin vertical slice. It should prioritize clear data modeling and visible behavior over advanced UI or backend features.
 
+Use the Figma Make prototype as the layout and page reference for the first implementation. The dashboard foundation maps to the prototype's `DashboardLayout` and `TeamBoard` pages.
+
+## Frontend Stack
+
+Use the stack recorded in `docs/decisions/0002-frontend-stack-from-figma.md`:
+
+- React.
+- TypeScript.
+- Vite.
+- Tailwind CSS.
+- shadcn-style UI components.
+
+The app should keep goal and metric rules in testable utilities rather than embedding them directly in page components.
+
+## Routes
+
+Initial route targets:
+
+- `/` for the landing page.
+- `/sign-in` for sign in.
+- `/sign-up` for account creation.
+- `/dashboard` for the protected team board.
+- `/dashboard/goals/new` for creating goals.
+
 ## Data Model
 
 Initial goal shape:
@@ -64,10 +88,12 @@ The first dashboard should model these QA metric categories:
 - UI tests passing.
 - UI test coverage.
 
-Metric values can be mocked for the foundation and connected to repo analysis in `specs/004-repo-qa-metrics/`.
+Metric values can be mocked for the foundation and connected to repo analysis in `specs/008-repo-qa-metrics/`.
 
 ## UI Notes
 
+- Use a protected dashboard shell for authenticated views.
+- Make the team board the default dashboard content.
 - Show a dashboard summary at the top.
 - Show goal rows or cards below the summary.
 - Show whether each goal is a team goal or individual goal.
