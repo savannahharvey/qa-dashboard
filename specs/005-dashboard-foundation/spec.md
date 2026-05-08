@@ -42,7 +42,7 @@ This spec covers the first foundation of the dashboard:
 
 ## Decisions
 
-- The frontend stack is React, TypeScript, Vite, Tailwind CSS, and shadcn-style components, following the Figma Make prototype direction.
+- The frontend stack is React, TypeScript, Vite, plain CSS, Vitest, and Playwright.
 - The primary authenticated route is `/dashboard`.
 - The first dashboard content view is the team board.
 - The first tracked QA metrics are tests passing and test coverage in the repo.
@@ -50,6 +50,18 @@ This spec covers the first foundation of the dashboard:
 - Goals should have owners.
 - Dates and deadlines are optional, not required.
 - The first dashboard version is read-only.
+
+## Implementation Order
+
+Implement this foundation after the app scaffold and sample data are in place:
+
+1. Create the React, TypeScript, and Vite scaffold.
+2. Add shared sample data for users, teams, goals, and QA metrics.
+3. Add progress, status, and metric utility logic.
+4. Build the read-only dashboard summary and team board.
+5. Add Vitest tests for business rules.
+6. Add responsive plain CSS styling.
+7. Add Playwright checks for the primary rendered dashboard flow.
 
 ## Related Specs
 

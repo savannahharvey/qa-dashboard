@@ -11,6 +11,7 @@
 
 ## Implementation Tasks
 
+- [ ] Implement goal creation after the read-only dashboard foundation and auth flow are in place.
 - [ ] Add goal scope support.
 - [ ] Require goal owner.
 - [ ] Support individual goal parent links.
@@ -23,9 +24,9 @@
 
 ## Verification Tasks
 
-- [ ] Verify team goals display owners.
-- [ ] Verify individual goals display owners.
-- [ ] Verify individual goals can support team goals.
-- [ ] Verify goals without dates are valid.
-- [ ] Verify valid goals can be created.
-- [ ] Verify invalid create-goal submissions show validation errors.
+- [ ] Verify team goals display owners with Playwright.
+- [ ] Verify individual goals display owners with Playwright.
+- [ ] Verify individual goals can support team goals with Playwright.
+- [ ] Verify goals without dates are valid with Vitest or Playwright.
+- [ ] Verify valid goals can be created with Playwright.
+- [ ] Verify invalid create-goal submissions show validation errors with Playwright.

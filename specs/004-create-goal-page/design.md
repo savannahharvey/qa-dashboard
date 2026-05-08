@@ -44,9 +44,9 @@ After a successful save, route the user back to `/dashboard`.
 
 ## Testing Notes
 
-- Test valid team goal creation.
-- Test valid individual goal creation.
-- Test individual goal parent linking.
-- Test required-field validation.
-- Test failed save behavior.
-- Test successful redirect to dashboard.
+- Use Playwright for valid team goal creation.
+- Use Playwright for valid individual goal creation.
+- Use Playwright for individual goal parent linking.
+- Use Playwright for required-field validation.
+- Use Playwright for failed save behavior.
+- Use Playwright for successful redirect to dashboard.

@@ -8,10 +8,11 @@
 
 ## Implementation Tasks
 
+- [ ] Implement as the first protected product surface after sample data and business-rule utilities exist.
 - [ ] Add `/dashboard` route.
 - [ ] Build protected dashboard layout.
 - [ ] Build team board page.
-- [ ] Add sample dashboard data.
+- [ ] Use sample dashboard data from `docs/sample-data.md`.
 - [ ] Render QA metric summary cards.
 - [ ] Render team goals.
 - [ ] Render supporting individual goals.
@@ -23,10 +24,10 @@
 
 ## Verification Tasks
 
-- [ ] Verify anonymous users cannot see dashboard content.
-- [ ] Verify signed-in users can see dashboard content.
-- [ ] Verify goals render from sample data.
-- [ ] Verify QA metrics render from sample data.
-- [ ] Verify empty state renders.
-- [ ] Verify create-goal action routes to `/dashboard/goals/new`.
-- [ ] Verify mobile and desktop layouts.
+- [ ] Verify anonymous users cannot see dashboard content with Playwright.
+- [ ] Verify signed-in users can see dashboard content with Playwright.
+- [ ] Verify goals render from sample data with Playwright.
+- [ ] Verify QA metrics render from sample data with Playwright.
+- [ ] Verify empty state renders with Playwright.
+- [ ] Verify create-goal action routes to `/dashboard/goals/new` with Playwright.
+- [ ] Verify mobile and desktop layouts with Playwright.

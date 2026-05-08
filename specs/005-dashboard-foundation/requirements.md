@@ -77,4 +77,4 @@ Acceptance criteria:
 - The dashboard should follow the layout and page inventory from the Figma prototype.
 - The first implementation should be small and easy to change.
 - The UI should work on common desktop and mobile widths.
-- Business rules for progress and status should be testable.
+- Business rules for progress, status, and metric interpretation should be testable.

@@ -12,13 +12,16 @@
 
 ## Implementation Tasks
 
-- [ ] Create React, TypeScript, Vite, Tailwind CSS project scaffold.
-- [ ] Add shadcn-style base UI components.
+- [ ] Create React, TypeScript, and Vite project scaffold.
+- [ ] Configure plain CSS structure.
+- [ ] Configure Vitest.
+- [ ] Configure Playwright.
 - [ ] Add app routes for landing, sign-in, sign-up, dashboard, and create goal.
 - [ ] Add protected dashboard layout.
-- [ ] Add sample goal data.
+- [ ] Add sample data from `docs/sample-data.md`.
 - [ ] Add progress calculation logic.
 - [ ] Add status calculation logic.
+- [ ] Add QA metric interpretation logic.
 - [ ] Build dashboard summary view.
 - [ ] Build team board goal list view.
 - [ ] Show goal owners.
@@ -29,8 +32,9 @@
 
 ## Verification Tasks
 
-- [ ] Test progress calculation.
-- [ ] Test status calculation.
+- [ ] Test progress calculation with Vitest.
+- [ ] Test status calculation with Vitest.
+- [ ] Test QA metric interpretation with Vitest.
 - [ ] Verify dashboard renders sample goals.
 - [ ] Verify empty state renders when there are no goals.
-- [ ] Verify layout at desktop and mobile widths.
+- [ ] Verify layout at desktop and mobile widths with Playwright.

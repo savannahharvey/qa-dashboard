@@ -24,7 +24,7 @@ Use a page component equivalent to the Figma prototype's `LandingPage`.
 
 ## Testing Notes
 
-- Render the page at `/`.
-- Verify sign-in and sign-up links.
+- Use Playwright to render the page at `/`.
+- Use Playwright to verify sign-in and sign-up links.
 - Verify no protected dashboard data appears.
 - Verify responsive layout at desktop and mobile widths.
