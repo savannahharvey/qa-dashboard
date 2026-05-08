@@ -28,7 +28,7 @@ Initial implementation can use sample data for:
 - Individual goals.
 - QA metrics.
 
-The sample data should be shaped so it can later be replaced by a backend or automated metric source.
+The sample data should come from the planning fixture in `docs/sample-data.md` and be shaped so it can later be replaced by a backend or automated metric source.
 
 ## State Handling
 
@@ -39,9 +39,9 @@ The sample data should be shaped so it can later be replaced by a backend or aut
 
 ## Testing Notes
 
-- Test dashboard protection.
-- Test sample data rendering.
-- Test goal empty state.
-- Test unavailable metric state.
-- Test create-goal navigation.
-- Test responsive layout.
+- Use Playwright for dashboard protection.
+- Use Playwright for sample data rendering.
+- Use Playwright for goal empty state.
+- Use Playwright for unavailable metric state.
+- Use Playwright for create-goal navigation.
+- Use Playwright for responsive layout.

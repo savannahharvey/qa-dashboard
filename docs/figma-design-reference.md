@@ -45,7 +45,7 @@ The Figma URL preview route points to `/dashboard`, so the dashboard should be t
 
 ## UI System Direction
 
-The prototype uses a React, TypeScript, Vite, Tailwind CSS, and shadcn-style component structure. Future implementation should prefer this stack unless a later decision record replaces it.
+The prototype uses a React, TypeScript, Vite, Tailwind CSS, and shadcn-style component structure. The project implementation will use the stack recorded in `docs/decisions/0002-frontend-stack-from-figma.md`: React, TypeScript, Vite, plain CSS, Vitest, and Playwright. Figma remains the visual and interaction reference, not the source of technical architecture.
 
 Use the Figma design as a behavioral and layout reference, not as a place to copy generated code blindly. Implementation should still follow the specs in `specs/`, keep business rules testable, and separate domain logic from rendering.
 

@@ -11,9 +11,13 @@ Start here:
 2. Review `docs/glossary.md` for shared terms.
 3. Review `docs/figma-design-reference.md` for the current Figma prototype alignment.
 4. Check `docs/decisions/` for recorded project decisions.
-5. Start implementation planning with `specs/001-home-page/`.
+5. Start implementation planning with `specs/000-implementation-readiness/`.
 
 Current specs:
+
+Preparation specs:
+
+- `000-implementation-readiness`: agreed stack, sample data, testing tools, and implementation order.
 
 UI/page specs:
 
@@ -31,8 +35,22 @@ Domain/data specs:
 
 Current implementation direction:
 
-- React, TypeScript, Vite, Tailwind CSS, and shadcn-style UI components.
+- React, TypeScript, Vite, plain CSS, Vitest, and Playwright.
 - Figma-guided screens for landing, sign-in, sign-up, dashboard, team board, and create goal.
+- Sample data is defined in `docs/sample-data.md`.
+
+Recommended implementation order:
+
+1. Scaffold the React, TypeScript, and Vite app.
+2. Add shared sample data for users, teams, goals, and QA metrics.
+3. Add testable progress, status, and metric utility logic.
+4. Build the read-only dashboard foundation.
+5. Add Vitest unit tests for business rules.
+6. Add responsive plain CSS styling.
+7. Add Playwright coverage for the primary page flows.
+8. Implement auth and team membership.
+9. Implement goal creation.
+10. Replace sample metric data with repo or CI-derived QA metrics.
 
 For each feature, create a new folder under `specs/` using this pattern:
 

@@ -40,7 +40,7 @@ Use an auth provider or equivalent app-level boundary for:
 
 ## Testing Notes
 
-- Test valid and invalid sign in.
-- Test valid and invalid sign up.
-- Test protected route behavior.
-- Test navigation between auth pages.
+- Use Playwright for valid and invalid sign in.
+- Use Playwright for valid and invalid sign up.
+- Use Playwright for protected route behavior.
+- Use Playwright for navigation between auth pages.

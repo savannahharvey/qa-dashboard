@@ -13,8 +13,9 @@ Use the stack recorded in `docs/decisions/0002-frontend-stack-from-figma.md`:
 - React.
 - TypeScript.
 - Vite.
-- Tailwind CSS.
-- shadcn-style UI components.
+- Plain CSS.
+- Vitest.
+- Playwright.
 
 The app should keep goal and metric rules in testable utilities rather than embedding them directly in page components.
 
@@ -90,6 +91,8 @@ The first dashboard should model these QA metric categories:
 
 Metric values can be mocked for the foundation and connected to repo analysis in `specs/008-repo-qa-metrics/`.
 
+Use the agreed planning fixtures in `docs/sample-data.md` as the starting sample dataset.
+
 ## UI Notes
 
 - Use a protected dashboard shell for authenticated views.
@@ -105,4 +108,5 @@ Metric values can be mocked for the foundation and connected to repo analysis in
 
 - Unit test progress calculation.
 - Unit test status calculation.
-- Add a basic render test once the frontend framework is chosen.
+- Use Vitest for progress, status, and metric utility tests.
+- Use Playwright for primary browser flow checks after the UI renders.

@@ -11,6 +11,7 @@
 
 ## Implementation Tasks
 
+- [ ] Implement after the read-only dashboard foundation is in place.
 - [ ] Add user model.
 - [ ] Add team model.
 - [ ] Add team membership model.
@@ -23,9 +24,9 @@
 
 ## Verification Tasks
 
-- [ ] Verify valid sign-up succeeds.
-- [ ] Verify duplicate username sign-up fails.
-- [ ] Verify valid sign-in succeeds.
-- [ ] Verify invalid sign-in fails.
-- [ ] Verify signed-in users can join a team.
-- [ ] Verify users only see their team's dashboard data.
+- [ ] Verify valid sign-up succeeds with Playwright.
+- [ ] Verify duplicate username sign-up fails with Playwright.
+- [ ] Verify valid sign-in succeeds with Playwright.
+- [ ] Verify invalid sign-in fails with Playwright.
+- [ ] Verify signed-in users can join a team with Playwright.
+- [ ] Verify users only see their team's dashboard data with Playwright.
