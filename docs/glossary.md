@@ -71,3 +71,15 @@ A test focused on an application programming interface or backend endpoint.
 ## UI Test
 
 A test focused on user interface behavior.
+
+## Azure DevOps
+
+The planned first external source for automated QA metrics, using read-only REST API calls for test runs, test results, and coverage.
+
+## Test Run
+
+An Azure DevOps execution record that groups test results from a pipeline or test session.
+
+## Test Result
+
+An Azure DevOps record for an individual test outcome inside a test run, such as passed, failed, timed out, or aborted.

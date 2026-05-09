@@ -15,7 +15,7 @@ type QaMetric = {
   status?: MetricStatus;
   value?: number;
   unit?: "%";
-  source: "sample" | "manual" | "automated";
+  source: "sample" | "manual" | "azure-devops";
   measuredAt?: string;
 };
 ```
@@ -36,7 +36,11 @@ Test coverage:
 
 ## Initial Source
 
-Use sample data first. Later automation can parse test and coverage output from the repo or CI pipeline without changing dashboard display rules.
+Use sample data first. Later automation should load Azure DevOps test results and coverage without changing dashboard display rules.
+
+## Automated Source
+
+Azure DevOps is the first planned automated source. See `specs/009-azure-devops-test-results/` for endpoint selection, authentication expectations, and normalization rules.
 
 ## Dashboard Display
 
@@ -55,3 +59,4 @@ Recommended summary cards:
 - Test coverage progress calculation.
 - Test unavailable coverage handling.
 - Test goal progress when driven by a QA metric.
+- Test source-agnostic rendering for sample and Azure DevOps metrics.

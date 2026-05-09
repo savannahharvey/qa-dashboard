@@ -20,6 +20,7 @@ Team goals can become hard to track when they live in scattered conversations, s
 - Connect individual goals to team goals.
 - Show who owns each goal.
 - Track initial QA metrics for unit, API, and UI tests.
+- Gather QA metrics from Azure DevOps test result and coverage endpoints after the sample dashboard foundation is stable.
 - Show progress in a way that is easy to scan.
 - Encourage collaboration by making blocked or at-risk goals visible.
 - Start with a simple foundation that can grow into a fuller dashboard.
@@ -30,7 +31,7 @@ Team goals can become hard to track when they live in scattered conversations, s
 - This project does not need complex analytics in the first version.
 - The first dashboard view can be read-only.
 - Dates and deadlines are optional.
-- Automated repo metric collection is not required in the first dashboard foundation.
+- Automated repo metric collection is not required in the first dashboard foundation, but Azure DevOps is the planned first integration.
 
 ## Initial Success Criteria
 
@@ -40,6 +41,7 @@ Team goals can become hard to track when they live in scattered conversations, s
 - A user can see measurable progress for each goal.
 - A user can tell which goals are active, completed, or at risk.
 - A user can see tests passing and test coverage for unit, API, and UI tests.
+- A user can eventually see Azure DevOps-sourced test status and coverage without changing how goals are displayed.
 - The project has specs that describe behavior before implementation begins.
 
 ## Figma Alignment
