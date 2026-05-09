@@ -37,9 +37,32 @@ Domain/data specs:
 Current implementation direction:
 
 - React, TypeScript, Vite, plain CSS, Vitest, and Playwright.
+- Backend foundation: Node.js, Express, TypeScript, SQLite, and SQL migrations.
 - Figma-guided screens for landing, sign-in, sign-up, dashboard, team board, and create goal.
 - Sample data is defined in `docs/sample-data.md`.
 - Azure DevOps is the planned first automated source for QA metrics after the sample dashboard is stable.
+
+## Backend Setup
+
+Install dependencies, initialize the local SQLite database, and start the API:
+
+```text
+npm install
+npm run db:init
+npm run dev
+```
+
+The default API URL is `http://localhost:4000`.
+
+Useful endpoints:
+
+- `GET /health`
+- `GET /api/teams/team-qa/dashboard`
+- `GET /api/teams/team-qa/test-suites`
+- `GET /api/teams/team-qa/metrics`
+- `GET /api/teams/team-qa/goals`
+
+The local database is created at `data/dev.db` by default. Use `DATABASE_URL=file:./path/to.db` to point the backend at another SQLite file.
 
 Recommended implementation order:
 
