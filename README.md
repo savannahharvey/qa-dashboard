@@ -32,12 +32,14 @@ Domain/data specs:
 - `006-auth-and-team-membership`: username/password sign-in, team membership, and protected data scope.
 - `007-goal-management`: team goals, individual goals, ownership, relationships, and optional dates.
 - `008-repo-qa-metrics`: tests passing and test coverage for unit, API, and UI tests.
+- `009-azure-devops-test-results`: read-only Azure DevOps REST API integration for test results and coverage.
 
 Current implementation direction:
 
 - React, TypeScript, Vite, plain CSS, Vitest, and Playwright.
 - Figma-guided screens for landing, sign-in, sign-up, dashboard, team board, and create goal.
 - Sample data is defined in `docs/sample-data.md`.
+- Azure DevOps is the planned first automated source for QA metrics after the sample dashboard is stable.
 
 Recommended implementation order:
 
@@ -50,7 +52,7 @@ Recommended implementation order:
 7. Add Playwright coverage for the primary page flows.
 8. Implement auth and team membership.
 9. Implement goal creation.
-10. Replace sample metric data with repo or CI-derived QA metrics.
+10. Replace sample metric data with Azure DevOps test result and coverage data.
 
 For each feature, create a new folder under `specs/` using this pattern:
 

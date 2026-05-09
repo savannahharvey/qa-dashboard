@@ -7,6 +7,7 @@
 - [x] Define test coverage requirements.
 - [x] Define unit, API, and UI categories.
 - [x] Decide initial metric source format.
+- [x] Decide first automated metric source.
 - [ ] Decide coverage target defaults.
 
 ## Implementation Tasks
@@ -19,7 +20,7 @@
 - [ ] Build QA metric summary cards.
 - [ ] Connect metrics to dashboard goals.
 - [ ] Show unavailable metric state.
-- [ ] Replace sample metric source with repo or CI-derived data after the dashboard foundation is stable.
+- [ ] Replace sample metric source with Azure DevOps-derived data after the dashboard foundation is stable.
 
 ## Verification Tasks
 

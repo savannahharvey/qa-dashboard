@@ -31,8 +31,18 @@ Acceptance criteria:
 - Given a team goal targets 90% unit test coverage and current coverage is 82%, then progress is calculated from 82 out of 90.
 - Given a goal tracks tests passing, then passing status can count as complete and failing status can count as incomplete.
 
+### Requirement 4: Support Automated Metric Sources
+
+QA metrics must be source-agnostic so sample metrics can be replaced by Azure DevOps metrics.
+
+Acceptance criteria:
+
+- Given metrics come from sample data, when the dashboard renders, then it uses the same display rules as automated metrics.
+- Given metrics come from Azure DevOps, when the dashboard renders, then it uses the same display rules as sample metrics.
+- Given an automated source is unavailable, when the dashboard renders, then unavailable metrics are shown without breaking goal progress display.
+
 ## Non-Functional Requirements
 
-- Metric data should be easy to replace with automated repo data later.
+- Metric data should be easy to replace with Azure DevOps or other automated repo data later.
 - Metric calculations should be testable.
 - Unavailable metrics should not break the dashboard.

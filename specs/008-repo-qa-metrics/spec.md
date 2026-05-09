@@ -24,11 +24,11 @@ As a team member, I want to see whether our repo tests are passing and how much 
 - API test coverage.
 - UI test passing status.
 - UI test coverage.
-- Sample or manually entered metric data until automation is added.
+- Sample or manually entered metric data for the first implementation.
+- Automated metric data from Azure DevOps test result endpoints when integration is configured.
 
 ## Out of Scope
 
-- Continuous integration integration.
 - Historical trend charts.
 - Automatic test runner detection.
 - External code quality tools.
@@ -38,4 +38,9 @@ As a team member, I want to see whether our repo tests are passing and how much 
 - The first QA metrics are tests passing and test coverage.
 - Metrics are grouped into unit, API, and UI categories.
 - The dashboard foundation can use sample metrics before repo automation exists.
+- Azure DevOps is the first external automated metric source.
 - QA metrics should be displayable both as summary dashboard cards and as goal-linked progress signals.
+
+## Related Specs
+
+- `specs/009-azure-devops-test-results/`
