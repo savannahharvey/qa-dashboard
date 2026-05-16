@@ -17,6 +17,7 @@ beforeAll(async () => {
   db.exec("PRAGMA foreign_keys = ON;");
   db.exec(fs.readFileSync(path.resolve(process.cwd(), "db/migrations/20260509125500_init/migration.sql"), "utf8"));
   seedTeam();
+  seedDashboardFixture();
 
   app = (await import("../src/app.js")).createApp();
 });
@@ -87,6 +88,70 @@ describe("team membership and protected routes", () => {
     await agent.post("/api/auth/sign-up").send({ username: "taylor", password: "password123" }).expect(201);
 
     await agent.post("/api/teams/team-qa/goals").send(validGoalBody("unused")).expect(403);
+  });
+});
+
+describe("dashboard read API scenarios", () => {
+  it("reports service health", async () => {
+    await request(app).get("/health").expect(200, { ok: true, service: "qa-dashboard-api" });
+  });
+
+  it("returns a complete dashboard view for an existing team", async () => {
+    const response = await request(app).get("/api/teams/team-qa/dashboard").expect(200);
+
+    expect(response.body.team).toEqual({
+      id: "team-qa",
+      name: "QA Dashboard Team",
+      joinCode: "QA-232",
+    });
+    expect(response.body.testSuites).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "suite-api", category: "api", enabled: true, source: "sample" }),
+        expect.objectContaining({ id: "suite-ui", category: "ui", enabled: true, source: "sample" }),
+        expect.objectContaining({ id: "suite-unit", category: "unit", enabled: true, source: "sample" }),
+      ]),
+    );
+    expect(response.body.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ category: "api", kind: "test-coverage", value: 74, unit: "%" }),
+        expect.objectContaining({ category: "ui", kind: "tests-passing", status: "failing" }),
+        expect.objectContaining({ category: "unit", kind: "tests-passing", status: "passing" }),
+      ]),
+    );
+    expect(response.body.goals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "goal-fixture-api-tests",
+          ownerName: "Fixture Jordan",
+          status: "completed",
+          progress: expect.objectContaining({ available: true, complete: true }),
+        }),
+      ]),
+    );
+  });
+
+  it("returns focused metrics, goals, and test suite resources", async () => {
+    const metrics = await request(app).get("/api/teams/team-qa/metrics").expect(200);
+    const goals = await request(app).get("/api/teams/team-qa/goals").expect(200);
+    const testSuites = await request(app).get("/api/teams/team-qa/test-suites").expect(200);
+
+    expect(metrics.body.metrics).toHaveLength(6);
+    expect(goals.body.goals).toHaveLength(3);
+    expect(testSuites.body.testSuites).toHaveLength(3);
+    expect(testSuites.body.testSuites[0]).toMatchObject({ teamId: "team-qa", category: "api" });
+  });
+
+  it("handles unknown routes and teams predictably", async () => {
+    await request(app).get("/api/nope").expect(404, { error: "Not found" });
+    await request(app).get("/api/teams/missing/dashboard").expect(404, { error: "Team not found" });
+
+    const metrics = await request(app).get("/api/teams/missing/metrics").expect(200);
+    const goals = await request(app).get("/api/teams/missing/goals").expect(200);
+    const testSuites = await request(app).get("/api/teams/missing/test-suites").expect(200);
+
+    expect(metrics.body.metrics).toEqual([]);
+    expect(goals.body.goals).toEqual([]);
+    expect(testSuites.body.testSuites).toEqual([]);
   });
 });
 
@@ -207,6 +272,121 @@ function seedTeam() {
     `INSERT INTO Team (id, name, joinCode, createdAt, updatedAt)
      VALUES (?, ?, ?, ?, ?)`,
   ).run("team-qa", "QA Dashboard Team", "QA-232", now, now);
+}
+
+function seedDashboardFixture() {
+  const now = new Date().toISOString();
+  const users = [
+    ["user-fixture-sam", "fixture-sam", "Fixture Sam"],
+    ["user-fixture-jordan", "fixture-jordan", "Fixture Jordan"],
+    ["user-fixture-mia", "fixture-mia", "Fixture Mia"],
+  ];
+
+  for (const [id, username, displayName] of users) {
+    db.prepare(
+      `INSERT INTO User (id, username, displayName, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).run(id, username, displayName, now, now);
+    db.prepare(
+      `INSERT INTO TeamMembership (userId, teamId)
+       VALUES (?, ?)`,
+    ).run(id, "team-qa");
+  }
+
+  const testSuites = [
+    ["suite-unit", "UNIT", "Unit tests"],
+    ["suite-api", "API", "API tests"],
+    ["suite-ui", "UI", "UI tests"],
+  ];
+
+  for (const [id, category, name] of testSuites) {
+    db.prepare(
+      `INSERT INTO TestSuite (id, teamId, category, name, source, enabled, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(id, "team-qa", category, name, "SAMPLE", 1, now, now);
+  }
+
+  const metrics = [
+    ["metric-unit-passing", "suite-unit", "UNIT", "TESTS_PASSING", "PASSING", null, null],
+    ["metric-unit-coverage", "suite-unit", "UNIT", "TEST_COVERAGE", null, 82, "%"],
+    ["metric-api-passing", "suite-api", "API", "TESTS_PASSING", "PASSING", null, null],
+    ["metric-api-coverage", "suite-api", "API", "TEST_COVERAGE", null, 74, "%"],
+    ["metric-ui-passing", "suite-ui", "UI", "TESTS_PASSING", "FAILING", null, null],
+    ["metric-ui-coverage", "suite-ui", "UI", "TEST_COVERAGE", null, 61, "%"],
+  ];
+
+  for (const [id, testSuiteId, category, kind, status, value, unit] of metrics) {
+    db.prepare(
+      `INSERT INTO QaMetric (id, teamId, testSuiteId, category, kind, status, value, unit, source, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(id, "team-qa", testSuiteId, category, kind, status, value, unit, "SAMPLE", now, now);
+  }
+
+  const goals = [
+    [
+      "goal-fixture-unit-coverage",
+      "user-fixture-sam",
+      "TEAM",
+      "Reach 90% unit test coverage",
+      "TEST_COVERAGE",
+      "UNIT",
+      82,
+      90,
+      "%",
+      "ACTIVE",
+    ],
+    [
+      "goal-fixture-api-tests",
+      "user-fixture-jordan",
+      "TEAM",
+      "Keep API tests passing",
+      "TESTS_PASSING",
+      "API",
+      1,
+      1,
+      null,
+      "ACTIVE",
+    ],
+    [
+      "goal-fixture-ui-coverage",
+      "user-fixture-mia",
+      "TEAM",
+      "Raise UI test coverage to 75%",
+      "TEST_COVERAGE",
+      "UI",
+      61,
+      75,
+      "%",
+      "AT_RISK",
+    ],
+  ];
+
+  for (const [id, ownerId, scope, title, metricType, testCategory, currentValue, targetValue, unit, status] of goals) {
+    db.prepare(
+      `INSERT INTO Goal (
+        id, teamId, ownerId, scope, parentGoalId, title, description, metricType, testCategory,
+        currentValue, targetValue, unit, dueDate, status, createdAt, updatedAt
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      id,
+      "team-qa",
+      ownerId,
+      scope,
+      null,
+      title,
+      null,
+      metricType,
+      testCategory,
+      currentValue,
+      targetValue,
+      unit,
+      null,
+      status,
+      now,
+      now,
+    );
+  }
 }
 
 function enableAzureConfig() {
