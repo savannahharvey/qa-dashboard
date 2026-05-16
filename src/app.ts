@@ -1,17 +1,19 @@
 import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
+import { authRoutes } from "./routes/authRoutes.js";
 import { teamRoutes } from "./routes/teamRoutes.js";
 
 export function createApp() {
   const app = express();
 
-  app.use(cors());
+  app.use(cors({ credentials: true, origin: true }));
   app.use(express.json());
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true, service: "qa-dashboard-api" });
   });
 
+  app.use("/api/auth", authRoutes);
   app.use("/api/teams", teamRoutes);
 
   app.use((_req, res) => {
