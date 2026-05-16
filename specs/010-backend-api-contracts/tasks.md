@@ -10,36 +10,36 @@
 
 ## Implementation Tasks
 
-- [ ] Add session storage or an in-memory session boundary.
-- [ ] Add password hashing and credential verification.
-- [ ] Add `POST /api/auth/sign-up`.
-- [ ] Add `POST /api/auth/sign-in`.
-- [ ] Add `POST /api/auth/sign-out`.
-- [ ] Add `GET /api/auth/me`.
-- [ ] Add current-user auth middleware.
-- [ ] Add team-membership authorization middleware.
-- [ ] Add `POST /api/teams/join`.
-- [ ] Add goal creation validation service.
-- [ ] Add `POST /api/teams/:teamId/goals`.
-- [ ] Add Azure DevOps metric provider service.
-- [ ] Add metric refresh persistence behavior.
-- [ ] Add `POST /api/teams/:teamId/metrics/refresh`.
-- [ ] Keep existing read-only dashboard endpoints compatible.
+- [x] Add session storage or an in-memory session boundary.
+- [x] Add password hashing and credential verification.
+- [x] Add `POST /api/auth/sign-up`.
+- [x] Add `POST /api/auth/sign-in`.
+- [x] Add `POST /api/auth/sign-out`.
+- [x] Add `GET /api/auth/me`.
+- [x] Add current-user auth middleware.
+- [x] Add team-membership authorization middleware.
+- [x] Add `POST /api/teams/join`.
+- [x] Add goal creation validation service.
+- [x] Add `POST /api/teams/:teamId/goals`.
+- [x] Add Azure DevOps metric provider service.
+- [x] Add metric refresh persistence behavior.
+- [x] Add `POST /api/teams/:teamId/metrics/refresh`.
+- [x] Keep existing read-only dashboard endpoints compatible.
 
 ## Verification Tasks
 
-- [ ] Test sign-up success and duplicate username failure.
-- [ ] Test sign-in success and invalid credential failure.
-- [ ] Test sign-out clears access to protected endpoints.
-- [ ] Test `GET /api/auth/me` for signed-in and anonymous users.
-- [ ] Test valid and invalid team join codes.
-- [ ] Test duplicate team join is idempotent.
-- [ ] Test unauthenticated protected requests return `401`.
-- [ ] Test non-member team requests return `403`.
-- [ ] Test valid team goal creation.
-- [ ] Test valid individual goal creation with a parent team goal.
-- [ ] Test goal validation errors.
-- [ ] Test Azure refresh success with mocked Azure responses.
-- [ ] Test Azure refresh missing config fallback.
-- [ ] Test Azure refresh upstream failure fallback.
-- [ ] Verify secrets are not returned in API responses, logs, or fixtures.
+- [x] Test sign-up success and duplicate username failure.
+- [x] Test sign-in success and invalid credential failure.
+- [x] Test sign-out clears access to protected endpoints.
+- [x] Test `GET /api/auth/me` for signed-in and anonymous users.
+- [x] Test valid and invalid team join codes.
+- [x] Test duplicate team join is idempotent.
+- [x] Test unauthenticated protected requests return `401`.
+- [x] Test non-member team requests return `403`.
+- [x] Test valid team goal creation.
+- [x] Test valid individual goal creation with a parent team goal.
+- [x] Test goal validation errors.
+- [x] Test Azure refresh success with mocked Azure responses.
+- [x] Test Azure refresh missing config fallback.
+- [x] Test Azure refresh upstream failure fallback.
+- [x] Verify secrets are not returned in API responses, logs, or fixtures.
