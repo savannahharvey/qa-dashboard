@@ -83,6 +83,12 @@ AZURE_DEVOPS_PROJECT=
 AZURE_DEVOPS_PAT=
 ```
 
+## Refresh API
+
+The first manual refresh API is defined in `specs/010-backend-api-contracts/` as `POST /api/teams/:teamId/metrics/refresh`.
+
+The endpoint should call the Azure DevOps provider from the backend, persist normalized `QaMetric` rows, and return unavailable metrics with non-secret diagnostics when configuration or upstream requests fail.
+
 ## Testing Notes
 
 - Mock Azure DevOps HTTP responses rather than calling live endpoints in unit tests.

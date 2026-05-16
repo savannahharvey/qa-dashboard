@@ -56,6 +56,8 @@ Create-goal fields:
 
 Validation should live outside the page component so it can be tested directly.
 
+The backend create-goal endpoint, request payload, response shape, validation rules, and authorization behavior are defined in `specs/010-backend-api-contracts/`.
+
 ## Testing Notes
 
 - Test goal ownership validation.

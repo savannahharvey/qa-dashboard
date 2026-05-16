@@ -8,6 +8,7 @@
 - [ ] Decide who can create team goals.
 - [ ] Decide who can create individual goals.
 - [x] Align first create-goal flow with Figma prototype.
+- [x] Add backend create-goal API contract reference.
 
 ## Implementation Tasks
 
@@ -21,6 +22,7 @@
 - [ ] Add create-goal form.
 - [ ] Validate create-goal inputs.
 - [ ] Save created goals into the current data source.
+- [ ] Implement create-goal endpoint from `specs/010-backend-api-contracts/`.
 
 ## Verification Tasks
 
