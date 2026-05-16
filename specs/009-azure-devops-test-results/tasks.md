@@ -7,6 +7,7 @@
 - [x] Define read-only auth expectations.
 - [x] Define Azure outcome mapping.
 - [x] Define coverage mapping.
+- [x] Add backend refresh API contract reference.
 
 ## Implementation Tasks
 
@@ -18,6 +19,7 @@
 - [ ] Add explicit Azure run-to-dashboard category mapping.
 - [ ] Add fallback unavailable metrics for missing config, failed requests, or ambiguous run mapping.
 - [ ] Connect the provider to the dashboard data-loading path after sample metrics are working.
+- [ ] Implement refresh endpoint from `specs/010-backend-api-contracts/`.
 - [ ] Keep sample metrics available for local development and demos.
 
 ## Verification Tasks

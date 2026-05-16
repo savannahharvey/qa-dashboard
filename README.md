@@ -33,6 +33,7 @@ Domain/data specs:
 - `007-goal-management`: team goals, individual goals, ownership, relationships, and optional dates.
 - `008-repo-qa-metrics`: tests passing and test coverage for unit, API, and UI tests.
 - `009-azure-devops-test-results`: read-only Azure DevOps REST API integration for test results and coverage.
+- `010-backend-api-contracts`: simple auth, team joining, goal creation, and Azure metric refresh API contracts.
 
 Current implementation direction:
 

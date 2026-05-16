@@ -29,10 +29,13 @@ type TeamMembership = {
 - The dashboard should receive a current user and team context after sign-in.
 - The Figma prototype includes an `AuthContext`; implementation should use an auth provider or equivalent boundary to keep auth state out of individual page components.
 - Include sign-in and sign-up pages in the first app scaffold.
+- Use the concrete simple-auth endpoint contracts in `specs/010-backend-api-contracts/`.
 
 ## Team Joining Notes
 
 The simplest first approach is a join code. A later spec can add invites, admin approval, or multiple teams per user.
+
+The first backend implementation should expose team joining through `POST /api/teams/join` as defined in `specs/010-backend-api-contracts/`.
 
 ## Testing Notes
 
