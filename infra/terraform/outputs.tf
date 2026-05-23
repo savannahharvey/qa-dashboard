@@ -13,6 +13,11 @@ output "db_identifier" {
   value       = aws_db_instance.postgres.id
 }
 
+output "db_name" {
+  description = "Initial PostgreSQL database name"
+  value       = var.db_name
+}
+
 output "secrets_arn" {
   description = "ARN of the Secrets Manager secret holding DB credentials"
   value       = aws_secretsmanager_secret.db_secret.arn

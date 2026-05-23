@@ -10,8 +10,8 @@ declare module "express-serve-static-core" {
 }
 
 export function requireAuth(repository: DashboardRepository) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const user = getCurrentUser(repository, req);
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const user = await getCurrentUser(repository, req);
 
     if (!user) {
       res.status(401).json({ error: "Not signed in" });
@@ -27,7 +27,7 @@ export function requireTeamMembership(repository: DashboardRepository) {
   const auth = requireAuth(repository);
 
   return (req: Request, res: Response, next: NextFunction) => {
-    auth(req, res, () => {
+    void auth(req, res, async () => {
       const user = req.currentUser;
       const teamId = String(req.params.teamId);
 
@@ -36,17 +36,17 @@ export function requireTeamMembership(repository: DashboardRepository) {
         return;
       }
 
-      if (!repository.findTeam(teamId)) {
+      if (!(await repository.findTeam(teamId))) {
         res.status(404).json({ error: "Team not found" });
         return;
       }
 
-      if (!repository.findMembership(user.id, teamId)) {
+      if (!(await repository.findMembership(user.id, teamId))) {
         res.status(403).json({ error: "Forbidden" });
         return;
       }
 
       next();
-    });
+    }).catch(next);
   };
 }

@@ -15,12 +15,12 @@ const categoryApiValues = { UNIT: "unit", API: "api", UI: "ui" } as const;
 export async function refreshAzureMetrics(repository: DashboardRepository, teamId: string) {
   const refreshedAt = new Date().toISOString();
   const diagnostics: Diagnostic[] = [];
-  const config = repository.findMetricSourceConfig(teamId, "AZURE_DEVOPS");
+  const config = await repository.findMetricSourceConfig(teamId, "AZURE_DEVOPS");
 
-  if (!config || config.enabled !== 1) {
+  if (!config || (config.enabled !== 1 && config.enabled !== true)) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps configuration is not enabled." });
     const metrics = unavailableMetrics(teamId, refreshedAt);
-    repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
+    await repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
     return formatRefreshResponse(refreshedAt, metrics, diagnostics);
   }
 
@@ -32,18 +32,18 @@ export async function refreshAzureMetrics(repository: DashboardRepository, teamI
   if (!organization || !project || !token) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps organization, project, or token configuration is missing." });
     const metrics = unavailableMetrics(teamId, refreshedAt);
-    repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
+    await repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
     return formatRefreshResponse(refreshedAt, metrics, diagnostics);
   }
 
   try {
     const metrics = await fetchAzureMetrics(teamId, refreshedAt, organization, project, token, settings);
-    repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
+    await repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
     return formatRefreshResponse(refreshedAt, metrics, diagnostics);
   } catch {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps metrics could not be refreshed." });
     const metrics = unavailableMetrics(teamId, refreshedAt);
-    repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
+    await repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
     return formatRefreshResponse(refreshedAt, metrics, diagnostics);
   }
 }

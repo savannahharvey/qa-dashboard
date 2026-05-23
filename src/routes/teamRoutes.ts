@@ -1,16 +1,15 @@
 import { Router } from "express";
-import { db } from "../db/sqlite.js";
-import { createSqliteRepository, toBoolean } from "../db/repository.js";
+import { repository } from "../db/index.js";
+import { toBoolean } from "../db/repository.js";
 import { requireAuth, requireTeamMembership } from "../middleware/auth.js";
 import { refreshAzureMetrics } from "../services/azureMetricsService.js";
 import { getTeamDashboard, getTeamGoals, getTeamMetrics } from "../services/dashboardService.js";
 import { formatGoal, validateAndBuildGoal } from "../services/goalService.js";
 
 export const teamRoutes = Router();
-const repository = createSqliteRepository(db);
 const protectedTeam = requireTeamMembership(repository);
 
-teamRoutes.post("/join", requireAuth(repository), (req, res) => {
+teamRoutes.post("/join", requireAuth(repository), async (req, res) => {
   const joinCode = typeof req.body?.joinCode === "string" ? req.body.joinCode.trim() : "";
 
   if (!joinCode) {
@@ -18,18 +17,18 @@ teamRoutes.post("/join", requireAuth(repository), (req, res) => {
     return;
   }
 
-  const team = repository.findTeamByJoinCode(joinCode);
+  const team = await repository.findTeamByJoinCode(joinCode);
   if (!team) {
     res.status(404).json({ error: "Join code not found" });
     return;
   }
 
-  repository.createMembership(req.currentUser!.id, team.id);
+  await repository.createMembership(req.currentUser!.id, team.id);
   res.json({ team: { id: team.id, name: team.name } });
 });
 
-teamRoutes.get("/:teamId/dashboard", (req, res) => {
-  const dashboard = getTeamDashboard(repository, req.params.teamId);
+teamRoutes.get("/:teamId/dashboard", async (req, res) => {
+  const dashboard = await getTeamDashboard(repository, req.params.teamId);
 
   if (!dashboard) {
     res.status(404).json({ error: "Team not found" });
@@ -40,23 +39,23 @@ teamRoutes.get("/:teamId/dashboard", (req, res) => {
 });
 
 teamRoutes.get("/:teamId/metrics", async (req, res) => {
-  res.json({ metrics: getTeamMetrics(repository, req.params.teamId) });
+  res.json({ metrics: await getTeamMetrics(repository, req.params.teamId) });
 });
 
 teamRoutes.get("/:teamId/goals", async (req, res) => {
-  res.json({ goals: getTeamGoals(repository, req.params.teamId) });
+  res.json({ goals: await getTeamGoals(repository, req.params.teamId) });
 });
 
-teamRoutes.post("/:teamId/goals", protectedTeam, (req, res) => {
+teamRoutes.post("/:teamId/goals", protectedTeam, async (req, res) => {
   const teamId = String(req.params.teamId);
-  const result = validateAndBuildGoal(repository, teamId, req.body);
+  const result = await validateAndBuildGoal(repository, teamId, req.body);
 
   if (!result.ok) {
     res.status(result.status).json(result.body);
     return;
   }
 
-  repository.createGoal(result.goal);
+  await repository.createGoal(result.goal);
   res.status(201).json({ goal: formatGoal(result.goal) });
 });
 
@@ -77,7 +76,7 @@ teamRoutes.post("/:teamId/metrics/refresh", protectedTeam, async (req, res, next
 });
 
 teamRoutes.get("/:teamId/test-suites", async (req, res) => {
-  const testSuites = repository.findTestSuitesByTeam(req.params.teamId);
+  const testSuites = await repository.findTestSuitesByTeam(req.params.teamId);
 
   res.json({
     testSuites: testSuites.map((suite) => ({

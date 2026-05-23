@@ -1,12 +1,10 @@
 import { Router } from "express";
-import { db } from "../db/sqlite.js";
-import { createSqliteRepository } from "../db/repository.js";
+import { repository } from "../db/index.js";
 import { clearSession, createUserRecord, getCurrentUser, publicUser, startSession, verifyPassword } from "../services/authService.js";
 
 export const authRoutes = Router();
-const repository = createSqliteRepository(db);
 
-authRoutes.post("/sign-up", (req, res) => {
+authRoutes.post("/sign-up", async (req, res) => {
   const username = typeof req.body?.username === "string" ? req.body.username.trim() : "";
   const password = typeof req.body?.password === "string" ? req.body.password : "";
   const displayName =
@@ -25,21 +23,21 @@ authRoutes.post("/sign-up", (req, res) => {
     return;
   }
 
-  if (repository.findUserByUsername(username)) {
+  if (await repository.findUserByUsername(username)) {
     res.status(409).json({ error: "Username already exists" });
     return;
   }
 
   const user = createUserRecord(username, password, displayName);
-  repository.createUser(user);
+  await repository.createUser(user);
   startSession(res, user.id);
   res.status(201).json({ user: publicUser(user) });
 });
 
-authRoutes.post("/sign-in", (req, res) => {
+authRoutes.post("/sign-in", async (req, res) => {
   const username = typeof req.body?.username === "string" ? req.body.username.trim() : "";
   const password = typeof req.body?.password === "string" ? req.body.password : "";
-  const user = username ? repository.findUserByUsername(username) : undefined;
+  const user = username ? await repository.findUserByUsername(username) : undefined;
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
     res.status(401).json({ error: "Invalid username or password" });
@@ -47,7 +45,7 @@ authRoutes.post("/sign-in", (req, res) => {
   }
 
   startSession(res, user.id);
-  res.json({ user: publicUser(user), teams: repository.findTeamsByUser(user.id) });
+  res.json({ user: publicUser(user), teams: await repository.findTeamsByUser(user.id) });
 });
 
 authRoutes.post("/sign-out", (req, res) => {
@@ -55,13 +53,13 @@ authRoutes.post("/sign-out", (req, res) => {
   res.status(204).send();
 });
 
-authRoutes.get("/me", (req, res) => {
-  const user = getCurrentUser(repository, req);
+authRoutes.get("/me", async (req, res) => {
+  const user = await getCurrentUser(repository, req);
 
   if (!user) {
     res.status(401).json({ error: "Not signed in" });
     return;
   }
 
-  res.json({ user: publicUser(user), teams: repository.findTeamsByUser(user.id) });
+  res.json({ user: publicUser(user), teams: await repository.findTeamsByUser(user.id) });
 });

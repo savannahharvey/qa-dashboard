@@ -75,7 +75,7 @@ export function clearSession(req: Request, res: Response) {
   });
 }
 
-export function getCurrentUser(repository: DashboardRepository, req: Request) {
+export async function getCurrentUser(repository: DashboardRepository, req: Request) {
   const sessionId = getSessionId(req);
   if (!sessionId) {
     return undefined;
@@ -87,7 +87,7 @@ export function getCurrentUser(repository: DashboardRepository, req: Request) {
     return undefined;
   }
 
-  const user = repository.findUser(session.userId);
+  const user = await repository.findUser(session.userId);
   if (!user) {
     sessions.delete(sessionId);
     return undefined;

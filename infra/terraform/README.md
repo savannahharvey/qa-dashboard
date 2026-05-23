@@ -30,7 +30,7 @@ username=$(echo "$secret_json" | jq -r .username)
 password=$(echo "$secret_json" | jq -r .password)
 endpoint=$(terraform output -raw db_endpoint)
 port=$(terraform output -raw db_port)
-dbname=$(terraform output -raw db_identifier)
+dbname=$(terraform output -raw db_name)
 echo "postgresql://$username:$password@$endpoint:$port/$dbname?sslmode=require"
 ```
 
@@ -41,7 +41,7 @@ $secretJson = aws secretsmanager get-secret-value --secret-id (terraform output 
 $secret = $secretJson | ConvertFrom-Json
 $endpoint = terraform output -raw db_endpoint
 $port = terraform output -raw db_port
-$dbname = terraform output -raw db_identifier
+$dbname = terraform output -raw db_name
 "postgresql://$($secret.username):$($secret.password)@$endpoint`:$port/$dbname?sslmode=require"
 ```
 

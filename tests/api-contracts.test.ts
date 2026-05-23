@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import request from "supertest";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 let app: Awaited<ReturnType<typeof import("../src/app.js").createApp>>;
 let db: DatabaseSync;
@@ -27,6 +27,12 @@ afterEach(() => {
   delete process.env.AZURE_DEVOPS_ORG;
   delete process.env.AZURE_DEVOPS_PROJECT;
   delete process.env.AZURE_DEVOPS_PAT;
+});
+
+afterAll(async () => {
+  const { closeDatabase } = await import("../src/db/index.js");
+  await closeDatabase();
+  db.close();
 });
 
 describe("auth API contracts", () => {

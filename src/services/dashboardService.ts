@@ -11,16 +11,18 @@ import type { GoalWithOwner, QaMetric } from "../domain/types.js";
 import type { DashboardRepository } from "../db/repository.js";
 import { toBoolean } from "../db/repository.js";
 
-export function getTeamDashboard(repository: DashboardRepository, teamId: string) {
-  const team = repository.findTeam(teamId);
+export async function getTeamDashboard(repository: DashboardRepository, teamId: string) {
+  const team = await repository.findTeam(teamId);
 
   if (!team) {
     return null;
   }
 
-  const testSuites = repository.findTestSuitesByTeam(teamId);
-  const qaMetrics = repository.findMetricsByTeam(teamId);
-  const goals = repository.findGoalsByTeam(teamId);
+  const [testSuites, qaMetrics, goals] = await Promise.all([
+    repository.findTestSuitesByTeam(teamId),
+    repository.findMetricsByTeam(teamId),
+    repository.findGoalsByTeam(teamId),
+  ]);
 
   return {
     team: {
@@ -40,13 +42,12 @@ export function getTeamDashboard(repository: DashboardRepository, teamId: string
   };
 }
 
-export function getTeamMetrics(repository: DashboardRepository, teamId: string) {
-  return repository.findMetricsByTeam(teamId).map(formatQaMetric);
+export async function getTeamMetrics(repository: DashboardRepository, teamId: string) {
+  return (await repository.findMetricsByTeam(teamId)).map(formatQaMetric);
 }
 
-export function getTeamGoals(repository: DashboardRepository, teamId: string) {
-  const goals = repository.findGoalsByTeam(teamId);
-  const metrics = repository.findMetricsByTeam(teamId);
+export async function getTeamGoals(repository: DashboardRepository, teamId: string) {
+  const [goals, metrics] = await Promise.all([repository.findGoalsByTeam(teamId), repository.findMetricsByTeam(teamId)]);
   return formatGoalsWithMetrics(goals, metrics);
 }
 

@@ -12,5 +12,3 @@ export function openDatabase(databaseUrl?: string) {
 
   return database;
 }
-
-export const db = openDatabase();

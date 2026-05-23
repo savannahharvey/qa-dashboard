@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id
+  username        String           @unique
+  displayName     String?
+  passwordHash    String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime
+  memberships     TeamMembership[]
+  goals           Goal[]
+}
+
+model Team {
+  id                  String               @id
+  name                String
+  joinCode            String?              @unique
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime
+  memberships         TeamMembership[]
+  testSuites          TestSuite[]
+  goals               Goal[]
+  metrics             QaMetric[]
+  metricSourceConfigs MetricSourceConfig[]
+}
+
+model TeamMembership {
+  userId String
+  teamId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([userId, teamId])
+  @@index([teamId])
+}
+
+model TestSuite {
+  id        String     @id
+  teamId    String
+  category  String
+  name      String
+  source    String     @default("SAMPLE")
+  enabled   Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime
+  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  metrics   QaMetric[]
+
+  @@unique([teamId, category])
+  @@index([teamId])
+}
+
+model Goal {
+  id            String   @id
+  teamId        String
+  ownerId       String
+  scope         String
+  parentGoalId  String?
+  title         String
+  description   String?
+  metricType    String?
+  testCategory  String?
+  currentValue  Float
+  targetValue   Float
+  unit          String?
+  dueDate       DateTime?
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  owner         User     @relation(fields: [ownerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  parentGoal    Goal?    @relation("GoalParent", fields: [parentGoalId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  childGoals    Goal[]   @relation("GoalParent")
+
+  @@index([teamId, scope])
+  @@index([ownerId])
+  @@index([parentGoalId])
+  @@index([teamId, metricType, testCategory])
+}
+
+model QaMetric {
+  id          String     @id
+  teamId      String
+  testSuiteId String?
+  category    String
+  kind        String
+  status      String?
+  value       Float?
+  unit        String?
+  source      String
+  measuredAt  DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime
+  team        Team       @relation(fields: [teamId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  testSuite   TestSuite? @relation(fields: [testSuiteId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([teamId, category, kind])
+  @@index([teamId, source])
+  @@index([measuredAt])
+}
+
+model MetricSourceConfig {
+  id        String   @id
+  teamId    String
+  source    String
+  settings  String
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([teamId, source])
+  @@index([teamId])
+}

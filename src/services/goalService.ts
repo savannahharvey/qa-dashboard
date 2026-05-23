@@ -23,7 +23,7 @@ export type GoalValidationResult =
   | { ok: true; goal: Goal }
   | { ok: false; status: number; body: { error: string; fields?: Record<string, string> } };
 
-export function validateAndBuildGoal(repository: DashboardRepository, teamId: string, body: unknown): GoalValidationResult {
+export async function validateAndBuildGoal(repository: DashboardRepository, teamId: string, body: unknown): Promise<GoalValidationResult> {
   const input = isRecord(body) ? body : {};
   const fields: Record<string, string> = {};
   const title = typeof input.title === "string" ? input.title.trim() : "";
@@ -44,7 +44,7 @@ export function validateAndBuildGoal(repository: DashboardRepository, teamId: st
   if (!scope) {
     fields.scope = "Scope must be team or individual";
   }
-  if (!ownerId || !repository.findMembership(ownerId, teamId)) {
+  if (!ownerId || !(await repository.findMembership(ownerId, teamId))) {
     fields.ownerId = "Owner must be a team member";
   }
   if (metricType === undefined) {
@@ -70,7 +70,7 @@ export function validateAndBuildGoal(repository: DashboardRepository, teamId: st
   }
 
   if (scope === "INDIVIDUAL" && parentGoalId) {
-    const parentGoal = repository.findGoal(parentGoalId);
+    const parentGoal = await repository.findGoal(parentGoalId);
     if (!parentGoal || parentGoal.teamId !== teamId || parentGoal.scope !== "TEAM") {
       fields.parentGoalId = "Parent goal must be a team goal in the same team";
     }

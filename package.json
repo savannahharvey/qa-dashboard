@@ -9,12 +9,15 @@
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:init": "tsx scripts/initDb.ts"
+    "db:init": "tsx scripts/initDb.ts",
+    "db:migrate:sqlite-to-postgres": "tsx scripts/migrateSqliteToPostgres.ts"
   },
   "dependencies": {
+    "@types/pg": "^8.20.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "pg": "^8.21.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
