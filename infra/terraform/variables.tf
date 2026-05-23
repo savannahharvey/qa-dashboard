@@ -13,7 +13,7 @@ variable "vpc_cidr" {
 variable "ssh_cidr" {
   description = "CIDR range allowed to SSH to the bastion host. Must be your IP or a restricted range."
   type        = string
-  default     = ""
+  default     = "205.185.107.33/32"
 
   validation {
     condition     = var.ssh_cidr != "" && var.ssh_cidr != "0.0.0.0/0"

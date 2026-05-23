@@ -1,0 +1,64 @@
+flowchart LR
+  developer["Developer / admin workstation"]
+  app["QA Dashboard app\nPrisma + DATABASE_URL"]
+  sqlite["Current local SQLite DB"]
+  csv["Exported SQL / CSV data"]
+
+  subgraph aws["AWS account - us-east-1"]
+    secrets["AWS Secrets Manager\nqa-dashboard-db-credentials"]
+    secretRole["IAM role\nqa-dashboard-secret-reader"]
+    secretPolicy["IAM policy\nqa-dashboard-db-secret-read"]
+
+    subgraph vpc["VPC\nqa-dashboard-vpc\n10.0.0.0/16"]
+      igw["Internet Gateway\nqa-dashboard-igw"]
+
+      subgraph publicSubnet["Public subnet\nqa-dashboard-public"]
+        publicRt["Public route table\n0.0.0.0/0 -> IGW"]
+        bastionSg["Security Group\nqa-dashboard-bastion-sg\nSSH 22 from restricted CIDR"]
+        bastion["EC2 bastion host\nqa-dashboard-bastion\nt3.micro"]
+      end
+
+      subgraph privateA["Private subnet A\nqa-dashboard-private-a"]
+        dbSubnetA["RDS subnet member"]
+      end
+
+      subgraph privateB["Private subnet B\nqa-dashboard-private-b"]
+        dbSubnetB["RDS subnet member"]
+      end
+
+      dbSubnetGroup["DB subnet group\nqa-dashboard-db-subnet-group"]
+      rdsSg["Security Group\nqa-dashboard-rds-sg\nPostgres 5432 from bastion SG"]
+      rds["Amazon RDS PostgreSQL\nqa-dashboard-postgres\ndb.t3.micro, 20 GiB gp2\nprivate, backups 7 days"]
+    end
+
+    ssm["AWS Systems Manager\nSession Manager access"]
+    optionalRotation["Optional rotation Lambda\n30 day rotation when enabled"]
+    cloudwatch["CloudWatch\nalarms and metrics"]
+  end
+
+  developer -->|"SSH 22, restricted CIDR"| bastionSg
+  developer -->|"SSM Session Manager"| ssm
+  ssm --> bastion
+
+  app -->|"reads database credentials"| secrets
+  app -.->|"attach role to EC2/ECS compute"| secretRole
+  secretRole --> secretPolicy
+  secretPolicy -->|"GetSecretValue / DescribeSecret"| secrets
+
+  sqlite -->|"dump or CSV export"| csv
+  csv -->|"psql / COPY via bastion"| bastion
+  app -->|"PostgreSQL TLS\nDATABASE_URL sslmode=require"| rds
+  bastion -->|"PostgreSQL 5432"| rdsSg
+  rdsSg --> rds
+
+  igw --> publicRt
+  publicRt --> bastion
+  bastionSg --> bastion
+  bastion -->|"egress to DB"| rdsSg
+  dbSubnetA --> dbSubnetGroup
+  dbSubnetB --> dbSubnetGroup
+  dbSubnetGroup --> rds
+
+  secrets -->|"master username/password"| rds
+  optionalRotation -.->|"optional"| secrets
+  rds -->|"metrics, logs, storage, connections"| cloudwatch
