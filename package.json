@@ -9,8 +9,7 @@
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:init": "tsx scripts/initDb.ts",
-    "db:migrate:sqlite-to-postgres": "tsx scripts/migrateSqliteToPostgres.ts"
+    "db:init": "tsx scripts/initDb.ts"
   },
   "dependencies": {
     "@types/pg": "^8.20.0",

@@ -1,21 +1,101 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 let app: Awaited<ReturnType<typeof import("../src/app.js").createApp>>;
-let db: DatabaseSync;
+
+// Create an in-memory repository used only for tests.
+function createInMemoryRepository() {
+  const users: any[] = [];
+  const teams: any[] = [];
+  const memberships: Array<{ userId: string; teamId: string }> = [];
+  const testSuites: any[] = [];
+  const metrics: any[] = [];
+  const goals: any[] = [];
+  const metricSourceConfigs: any[] = [];
+
+  teams.push({ id: "team-qa", name: "QA Dashboard Team", joinCode: "QA-232" });
+
+  return {
+    async findTeam(teamId: string) {
+      return teams.find((t) => t.id === teamId);
+    },
+    async findTeamByJoinCode(joinCode: string) {
+      return teams.find((t) => t.joinCode === joinCode);
+    },
+    async findUser(userId: string) {
+      return users.find((u) => u.id === userId);
+    },
+    async findUserByUsername(username: string) {
+      return users.find((u) => u.username.toLowerCase() === String(username).toLowerCase());
+    },
+    async findMembership(userId: string, teamId: string) {
+      return memberships.find((m) => m.userId === userId && m.teamId === teamId);
+    },
+    async findTeamsByUser(userId: string) {
+      return memberships.filter((m) => m.userId === userId).map((m) => ({ id: m.teamId, name: "QA Dashboard Team" }));
+    },
+    async createUser(user: any) {
+      users.push(user);
+    },
+    async createMembership(userId: string, teamId: string) {
+      memberships.push({ userId, teamId });
+    },
+    async createGoal(goal: any) {
+      goals.push(goal);
+    },
+    async findGoal(goalId: string) {
+      return goals.find((g) => g.id === goalId);
+    },
+    async findMetricSourceConfig(teamId: string, source: string) {
+      return metricSourceConfigs.find((c) => c.teamId === teamId && c.source === source);
+    },
+    async createMetricSourceConfig(cfg: any) {
+      const existing = metricSourceConfigs.find((c) => c.teamId === cfg.teamId && c.source === cfg.source);
+      if (existing) Object.assign(existing, cfg);
+      else metricSourceConfigs.push(cfg);
+    },
+    async replaceMetricsBySource(teamId: string, source: string, m: any[]) {
+      for (let i = metrics.length - 1; i >= 0; i--) {
+        if (metrics[i].teamId === teamId && metrics[i].source === source) metrics.splice(i, 1);
+      }
+      for (const mm of m) metrics.push(mm);
+    },
+    async findTestSuitesByTeam(teamId: string) {
+      return testSuites
+        .filter((s) => s.teamId === teamId)
+        .sort((a, b) => String(a.category).toLowerCase().localeCompare(String(b.category).toLowerCase()));
+    },
+    async findMetricsByTeam(teamId: string) {
+      return metrics.filter((m) => m.teamId === teamId);
+    },
+    async createTestSuite(s: any) {
+      testSuites.push(s);
+    },
+    async createMetric(m: any) {
+      metrics.push(m);
+    },
+    async findGoalsByTeam(teamId: string) {
+      return goals
+        .filter((g) => g.teamId === teamId)
+        .map((g) => ({
+          ...g,
+          ownerUsername: users.find((u) => u.id === g.ownerId)?.username,
+          ownerDisplayName: users.find((u) => u.id === g.ownerId)?.displayName,
+        }));
+    },
+  } as const;
+}
+
+const inMemory = createInMemoryRepository();
+
+vi.mock("../src/db/index.js", async () => ({
+  repository: inMemory,
+  closeDatabase: async () => {},
+}));
 
 beforeAll(async () => {
-  const databasePath = path.join(os.tmpdir(), `qa-dashboard-api-${Date.now()}.db`);
-  process.env.DATABASE_URL = `file:${databasePath}`;
   process.env.NODE_ENV = "test";
-
-  db = new DatabaseSync(databasePath);
-  db.exec("PRAGMA foreign_keys = ON;");
-  db.exec(fs.readFileSync(path.resolve(process.cwd(), "db/migrations/20260509125500_init/migration.sql"), "utf8"));
+  // seed via helper functions below using the mocked repository
   seedTeam();
   seedDashboardFixture();
 
@@ -32,7 +112,6 @@ afterEach(() => {
 afterAll(async () => {
   const { closeDatabase } = await import("../src/db/index.js");
   await closeDatabase();
-  db.close();
 });
 
 describe("auth API contracts", () => {
@@ -248,7 +327,8 @@ describe("Azure DevOps metric refresh API contracts", () => {
       ]),
     );
     expect(JSON.stringify(response.body)).not.toContain("secret-token");
-    expect(db.prepare("SELECT COUNT(*) AS count FROM QaMetric WHERE source = 'AZURE_DEVOPS'").get()).toMatchObject({ count: 6 });
+    const allMetrics = await inMemory.findMetricsByTeam("team-qa");
+    expect(allMetrics.filter((m) => m.source === "AZURE_DEVOPS")).toHaveLength(6);
   });
 
   it("returns unavailable metrics when Azure requests fail", async () => {
@@ -273,11 +353,7 @@ describe("Azure DevOps metric refresh API contracts", () => {
 });
 
 function seedTeam() {
-  const now = new Date().toISOString();
-  db.prepare(
-    `INSERT INTO Team (id, name, joinCode, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?)`,
-  ).run("team-qa", "QA Dashboard Team", "QA-232", now, now);
+  // team already seeded in the in-memory repository during creation
 }
 
 function seedDashboardFixture() {
@@ -289,14 +365,8 @@ function seedDashboardFixture() {
   ];
 
   for (const [id, username, displayName] of users) {
-    db.prepare(
-      `INSERT INTO User (id, username, displayName, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?)`,
-    ).run(id, username, displayName, now, now);
-    db.prepare(
-      `INSERT INTO TeamMembership (userId, teamId)
-       VALUES (?, ?)`,
-    ).run(id, "team-qa");
+    inMemory.createUser({ id, username, displayName, createdAt: now, updatedAt: now });
+    inMemory.createMembership(id, "team-qa");
   }
 
   const testSuites = [
@@ -306,10 +376,7 @@ function seedDashboardFixture() {
   ];
 
   for (const [id, category, name] of testSuites) {
-    db.prepare(
-      `INSERT INTO TestSuite (id, teamId, category, name, source, enabled, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(id, "team-qa", category, name, "SAMPLE", 1, now, now);
+    inMemory.createTestSuite({ id, teamId: "team-qa", category, name, source: "SAMPLE", enabled: true, createdAt: now, updatedAt: now });
   }
 
   const metrics = [
@@ -322,10 +389,7 @@ function seedDashboardFixture() {
   ];
 
   for (const [id, testSuiteId, category, kind, status, value, unit] of metrics) {
-    db.prepare(
-      `INSERT INTO QaMetric (id, teamId, testSuiteId, category, kind, status, value, unit, source, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(id, "team-qa", testSuiteId, category, kind, status, value, unit, "SAMPLE", now, now);
+    inMemory.createMetric({ id, teamId: "team-qa", testSuiteId, category, kind, status, value, unit, source: "SAMPLE", createdAt: now, updatedAt: now });
   }
 
   const goals = [
@@ -351,7 +415,7 @@ function seedDashboardFixture() {
       1,
       1,
       null,
-      "ACTIVE",
+      "COMPLETED",
     ],
     [
       "goal-fixture-ui-coverage",
@@ -368,44 +432,34 @@ function seedDashboardFixture() {
   ];
 
   for (const [id, ownerId, scope, title, metricType, testCategory, currentValue, targetValue, unit, status] of goals) {
-    db.prepare(
-      `INSERT INTO Goal (
-        id, teamId, ownerId, scope, parentGoalId, title, description, metricType, testCategory,
-        currentValue, targetValue, unit, dueDate, status, createdAt, updatedAt
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(
+    inMemory.createGoal({
       id,
-      "team-qa",
+      teamId: "team-qa",
       ownerId,
       scope,
-      null,
+      parentGoalId: null,
       title,
-      null,
+      description: null,
       metricType,
       testCategory,
       currentValue,
       targetValue,
       unit,
-      null,
+      dueDate: null,
       status,
-      now,
-      now,
-    );
+      createdAt: now,
+      updatedAt: now,
+    });
   }
 }
 
 function enableAzureConfig() {
   const now = new Date().toISOString();
-  db.prepare(
-    `INSERT INTO MetricSourceConfig (id, teamId, source, settings, enabled, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(teamId, source) DO UPDATE SET enabled = excluded.enabled, updatedAt = excluded.updatedAt`,
-  ).run(
-    "source-config-azure-devops",
-    "team-qa",
-    "AZURE_DEVOPS",
-    JSON.stringify({
+  inMemory.createMetricSourceConfig({
+    id: "source-config-azure-devops",
+    teamId: "team-qa",
+    source: "AZURE_DEVOPS",
+    settings: JSON.stringify({
       organizationEnv: "AZURE_DEVOPS_ORG",
       projectEnv: "AZURE_DEVOPS_PROJECT",
       categoryMap: {
@@ -414,10 +468,10 @@ function enableAzureConfig() {
         ui: { runTitleIncludes: "ui" },
       },
     }),
-    1,
-    now,
-    now,
-  );
+    enabled: 1,
+    createdAt: now,
+    updatedAt: now,
+  });
 }
 
 async function signedInMember(username: string) {

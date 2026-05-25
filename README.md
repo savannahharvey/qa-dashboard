@@ -38,7 +38,7 @@ Domain/data specs:
 Current implementation direction:
 
 - React, TypeScript, Vite, plain CSS, Vitest, and Playwright.
-- Backend foundation: Node.js, Express, TypeScript, PostgreSQL on AWS RDS, SQLite local fallback, and SQL migrations.
+-- Backend foundation: Node.js, Express, TypeScript, PostgreSQL on AWS RDS, and SQL migrations.
 - Figma-guided screens for landing, sign-in, sign-up, dashboard, team board, and create goal.
 - Sample data is defined in `docs/sample-data.md`.
 - Azure DevOps is the planned first automated source for QA metrics after the sample dashboard is stable.
@@ -63,21 +63,13 @@ Useful endpoints:
 - `GET /api/teams/team-qa/metrics`
 - `GET /api/teams/team-qa/goals`
 
-By default, the backend still falls back to `DATABASE_URL=file:./data/dev.db` for local development and tests. For AWS RDS, set:
+Set `DATABASE_URL` to a PostgreSQL connection string (no local SQLite fallback):
 
 ```text
 DATABASE_URL=postgresql://<username>:<password>@<rds-endpoint>:5432/<dbname>?sslmode=require
 ```
 
 Then run `npm run db:init` to apply the PostgreSQL schema and seed the QA dashboard sample data.
-
-To copy existing local SQLite data into RDS, set `DATABASE_URL` to the RDS PostgreSQL URL and run:
-
-```text
-npm run db:migrate:sqlite-to-postgres
-```
-
-Use `SOURCE_SQLITE_DATABASE_URL=file:./path/to.db` if the SQLite source is not `data/dev.db`.
 
 Recommended implementation order:
 

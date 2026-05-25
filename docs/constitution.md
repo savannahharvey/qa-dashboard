@@ -35,14 +35,14 @@ Every user-facing UI flow must have automated verification.
 - Accessibility-critical behavior, including labels, focus, keyboard navigation, and readable states, must be covered where the UI exposes it.
 - New or changed UI behavior is not complete until its automation is committed and passing.
 
-### 4. SQLite Is The System Of Record
+### 4. PostgreSQL Is The System Of Record
 
-SQLite is the required persistence layer for this project unless this constitution is amended.
+PostgreSQL (typically managed on AWS RDS in production) is the required persistence layer for this project unless this constitution is amended.
 
 - Schema changes must be expressed as committed SQL migrations under `db/migrations/`.
 - Application code must access persisted data through the repository or data-access boundary, not scattered SQL in unrelated modules.
 - Tests that touch persistence must use isolated test databases or controlled fixtures.
-- Data written to SQLite must use the normalized domain values defined in the specs, such as `tests-passing`, `test-coverage`, and `azure-devops`.
+- Data written to the database must use the normalized domain values defined in the specs, such as `tests-passing`, `test-coverage`, and `azure-devops`.
 
 ### 5. Node Owns Backend Processing
 
@@ -89,7 +89,7 @@ A change is done only when all of the following are true:
 - Tests were written before or alongside implementation according to TDD.
 - API behavior affected by the change has automated coverage.
 - UI behavior affected by the change has automated coverage.
-- SQLite migrations or data changes are committed when persistence changes.
+	- Database migrations or data changes are committed when persistence changes.
 - Azure DevOps interactions, if involved, are mocked in tests and keep secrets server-side.
 - `npm run build` and `npm test` pass locally or any failure is documented with the reason.
 
@@ -111,6 +111,6 @@ Ratified: 2026-05-16
 Current stack baseline:
 
 - Node.js, Express, and TypeScript for backend processing.
-- SQLite with committed SQL migrations for persistence.
+ - PostgreSQL (AWS RDS) with committed SQL migrations for persistence.
 - React, TypeScript, Vite, plain CSS, Vitest, and Playwright for UI implementation and verification.
 - Azure DevOps REST APIs for read-only test result and coverage automation.

@@ -1,28 +1,19 @@
-import path from "node:path";
-
-export type DatabaseProvider = "sqlite" | "postgres";
+import "dotenv/config";
 
 export function getDatabaseUrl() {
-  return process.env.DATABASE_URL ?? "file:./data/dev.db";
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error("DATABASE_URL must be set to a PostgreSQL connection string.");
+  }
+  return url;
 }
 
-export function getDatabaseProvider(databaseUrl = getDatabaseUrl()): DatabaseProvider {
-  if (databaseUrl.startsWith("file:")) {
-    return "sqlite";
-  }
+export type DatabaseProvider = "postgres";
 
+export function getDatabaseProvider(databaseUrl = getDatabaseUrl()): DatabaseProvider {
   if (databaseUrl.startsWith("postgresql://") || databaseUrl.startsWith("postgres://")) {
     return "postgres";
   }
 
-  throw new Error("DATABASE_URL must start with file:, postgresql://, or postgres://.");
-}
-
-export function getSqlitePath(databaseUrl = getDatabaseUrl()) {
-  if (!databaseUrl.startsWith("file:")) {
-    throw new Error("Only file: SQLite DATABASE_URL values are supported.");
-  }
-
-  const filePath = databaseUrl.slice("file:".length);
-  return path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
+  throw new Error("DATABASE_URL must start with postgresql:// or postgres://.");
 }
