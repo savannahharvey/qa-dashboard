@@ -3,6 +3,8 @@ node_modules/
 dist/
 coverage/
 dev-server.log
+dev-web.log
+dev-web.err
 prisma/dev.db
 prisma/dev.db-journal
 data/*.db

@@ -1,22 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { DatabaseSync } from "node:sqlite";
 import type { Pool } from "pg";
-import { getDatabaseProvider, getDatabaseUrl } from "../src/db/databaseUrl.js";
+import { getDatabaseUrl } from "../src/db/databaseUrl.js";
 import { openPostgresPool } from "../src/db/postgres.js";
-import { openDatabase } from "../src/db/sqlite.js";
 
 const databaseUrl = getDatabaseUrl();
-const provider = getDatabaseProvider(databaseUrl);
-
-function applySqliteSchema(db: DatabaseSync) {
-  const exists = Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get("Team"));
-  if (exists) {
-    return;
-  }
-
-  db.exec(fs.readFileSync(path.resolve(process.cwd(), "db/migrations/20260509125500_init/migration.sql"), "utf8"));
-}
 
 async function applyPostgresSchema(pool: Pool) {
   await pool.query(fs.readFileSync(path.resolve(process.cwd(), "db/migrations/20260509125500_init/postgres.sql"), "utf8"));
@@ -26,19 +14,11 @@ function now() {
   return new Date().toISOString();
 }
 
-async function seedSqlite(db: DatabaseSync) {
-  const upsert = (sql: string, values: unknown[]) => db.prepare(sql).run(...values.map((value) => typeof value === "boolean" ? Number(value) : value));
-  await seed((sql, values) => {
-    upsert(sql, values);
-    return Promise.resolve();
-  }, sqliteSql);
-}
-
 async function seedPostgres(pool: Pool) {
   await seed((sql, values) => pool.query(sql, values).then(() => undefined), postgresSql);
 }
 
-async function seed(run: (sql: string, values: unknown[]) => Promise<void>, sql: typeof sqliteSql) {
+async function seed(run: (sql: string, values: unknown[]) => Promise<void>, sql: typeof postgresSql) {
   const timestamp = now();
 
   await run(sql.team, ["team-qa", "QA Dashboard Team", "QA-232", timestamp, timestamp]);
@@ -125,30 +105,6 @@ async function seed(run: (sql: string, values: unknown[]) => Promise<void>, sql:
   ]);
 }
 
-const sqliteSql = {
-  team: `INSERT INTO Team (id, name, joinCode, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET name = excluded.name, joinCode = excluded.joinCode, updatedAt = excluded.updatedAt`,
-  user: `INSERT INTO User (id, username, displayName, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET username = excluded.username, displayName = excluded.displayName, updatedAt = excluded.updatedAt`,
-  membership: `INSERT INTO TeamMembership (userId, teamId)
-       VALUES (?, ?)
-       ON CONFLICT(userId, teamId) DO NOTHING`,
-  testSuite: `INSERT INTO TestSuite (id, teamId, category, name, source, enabled, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET name = excluded.name, source = excluded.source, enabled = excluded.enabled, updatedAt = excluded.updatedAt`,
-  metric: `INSERT INTO QaMetric (id, teamId, testSuiteId, category, kind, status, value, unit, source, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET status = excluded.status, value = excluded.value, unit = excluded.unit, source = excluded.source, updatedAt = excluded.updatedAt`,
-  goal: `INSERT INTO Goal (id, teamId, ownerId, scope, parentGoalId, title, description, metricType, testCategory, currentValue, targetValue, unit, status, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET currentValue = excluded.currentValue, targetValue = excluded.targetValue, status = excluded.status, updatedAt = excluded.updatedAt`,
-  metricSourceConfig: `INSERT INTO MetricSourceConfig (id, teamId, source, settings, enabled, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(teamId, source) DO UPDATE SET settings = excluded.settings, enabled = excluded.enabled, updatedAt = excluded.updatedAt`,
-};
-
 const postgresSql = {
   team: `INSERT INTO "Team" ("id", "name", "joinCode", "createdAt", "updatedAt")
      VALUES ($1, $2, $3, $4, $5)
@@ -173,16 +129,12 @@ const postgresSql = {
      ON CONFLICT ("teamId", "source") DO UPDATE SET "settings" = excluded."settings", "enabled" = excluded."enabled", "updatedAt" = excluded."updatedAt"`,
 };
 
-if (provider === "postgres") {
-  const pool = openPostgresPool(databaseUrl);
+const pool = openPostgresPool(databaseUrl);
+
+try {
   await applyPostgresSchema(pool);
   await seedPostgres(pool);
-  await pool.end();
   console.log("PostgreSQL database initialized with QA dashboard sample data.");
-} else {
-  const db = openDatabase(databaseUrl);
-  applySqliteSchema(db);
-  await seedSqlite(db);
-  db.close();
-  console.log("SQLite database initialized with QA dashboard sample data.");
+} finally {
+  await pool.end();
 }

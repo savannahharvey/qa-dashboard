@@ -43,9 +43,9 @@ Current implementation direction:
 - Sample data is defined in `docs/sample-data.md`.
 - Azure DevOps is the planned first automated source for QA metrics after the sample dashboard is stable.
 
-## Backend Setup
+## Local Setup
 
-Install dependencies, initialize the configured database, and start the API:
+Install dependencies, initialize the configured database, and start the app:
 
 ```text
 npm install
@@ -53,7 +53,15 @@ npm run db:init
 npm run dev
 ```
 
-The default API URL is `http://localhost:4000`.
+The default API URL is `http://localhost:4000`. The Vite frontend runs at `http://127.0.0.1:5173` and proxies API requests to the backend.
+
+Useful scripts:
+
+- `npm run dev`: starts the API and Vite frontend together.
+- `npm run dev:api`: starts only the Express API.
+- `npm run dev:web`: starts only the Vite frontend.
+- `npm run build`: type-checks the API and frontend, then builds the frontend.
+- `npm test`: runs backend and frontend tests.
 
 Useful endpoints:
 

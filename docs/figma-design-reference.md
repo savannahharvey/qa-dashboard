@@ -4,7 +4,9 @@
 
 Figma Make file:
 
-https://www.figma.com/make/jR9aMZDETPylRs87xHlcTI/QA-Dashboard?t=tuO7xeHvyPxgePw1-1&preview-route=%2Fdashboard
+<!-- https://www.figma.com/make/jR9aMZDETPylRs87xHlcTI/QA-Dashboard?t=tuO7xeHvyPxgePw1-1&preview-route=%2Fdashboard -->
+
+https://www.figma.com/make/DGndJKj9d1Kw87XWgLtuSf/Create-QA-Dashboard?t=Q4iBsbS3ptMwfiDh-0&preview-route=%2Fdashboard
 
 Reviewed with the Figma MCP on 2026-05-07.
 

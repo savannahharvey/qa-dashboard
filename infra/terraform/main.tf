@@ -65,14 +65,24 @@ resource "aws_subnet" "public" {
 
 resource "aws_security_group" "rds_sg" {
   name        = "qa-dashboard-rds-sg"
-  description = "Allow Postgres access from bastion host"
+  description = "Allow Postgres access from app/bastion"
   vpc_id      = aws_vpc.main.id
 
+  # Allow from bastion for internal connections
   ingress {
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.bastion_sg.id]
+  }
+
+  # Allow from specific IP (development machine)
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["${var.ssh_cidr}"]
+    description = "Direct access from development machine"
   }
 
   egress {

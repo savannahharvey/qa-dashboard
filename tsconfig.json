@@ -11,5 +11,6 @@
     "noEmit": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src", "prisma", "tests"]
+  "include": ["src", "prisma", "tests"],
+  "exclude": ["src/client"]
 }
