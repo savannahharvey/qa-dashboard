@@ -71,7 +71,7 @@ Useful endpoints:
 - `GET /api/teams/team-qa/metrics`
 - `GET /api/teams/team-qa/goals`
 
-Set `DATABASE_URL` to a PostgreSQL connection string (no local SQLite fallback):
+Set `DATABASE_URL` to a PostgreSQL connection string:
 
 ```text
 DATABASE_URL=postgresql://<username>:<password>@<rds-endpoint>:5432/<dbname>?sslmode=require

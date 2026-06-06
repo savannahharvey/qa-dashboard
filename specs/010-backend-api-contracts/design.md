@@ -33,7 +33,7 @@ Recommended session cookie behavior:
 - `Secure`: false in local development, true in production.
 - Path: `/`.
 
-The first implementation can store session records in SQLite or memory. SQLite is more durable and easier to inspect, but memory is acceptable for a simple class-project implementation if tests account for it.
+The first implementation can store session records in memory. Memory is acceptable for a simple class-project implementation if tests account for it.
 
 Public user responses must include only:
 

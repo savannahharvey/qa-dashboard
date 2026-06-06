@@ -54,7 +54,7 @@ The API should use simple session authentication:
 - Protected endpoints read the current user from the session cookie.
 - Sign-out clears the session cookie.
 
-The first implementation may store sessions in memory or SQLite. If sessions are stored in memory, tests and local development must treat session loss after server restart as acceptable.
+The first implementation may store sessions in memory. If sessions are stored in memory, tests and local development must treat session loss after server restart as acceptable.
 
 ## Requirements
 
@@ -366,5 +366,5 @@ Validation errors:
 
 ## Open Questions
 
-- Should sessions be persisted in SQLite immediately, or is in-memory session storage acceptable for the first backend implementation?
+- Should sessions be persisted immediately, or is in-memory session storage acceptable for the first backend implementation?
 - Should Azure metric refresh be manually triggered only, or should a later spec add scheduled refreshes?
