@@ -9,6 +9,10 @@ let postgresPool: Pool | undefined;
 
 export const repository = createPostgresRepository((postgresPool = openPostgresPool(databaseUrl)));
 
+export async function verifyDatabaseConnection() {
+  await postgresPool?.query("SELECT 1");
+}
+
 export async function closeDatabase() {
   await postgresPool?.end();
 }

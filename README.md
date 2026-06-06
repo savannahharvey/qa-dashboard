@@ -45,15 +45,18 @@ Current implementation direction:
 
 ## Local Setup
 
-Install dependencies, initialize the configured database, and start the app:
+Install dependencies, open the RDS tunnel, initialize the database, and start the app:
 
 ```text
 npm install
+npm run db:tunnel
 npm run db:init
 npm run dev
 ```
 
 The default API URL is `http://localhost:4000`. The Vite frontend runs at `http://127.0.0.1:5173` and proxies API requests to the backend.
+
+The RDS instance is private. Use the bastion host and AWS Systems Manager port forwarding to reach it locally, then point `DATABASE_URL` at `127.0.0.1:5432` while the tunnel is open.
 
 Useful scripts:
 
@@ -71,13 +74,23 @@ Useful endpoints:
 - `GET /api/teams/team-qa/metrics`
 - `GET /api/teams/team-qa/goals`
 
-Set `DATABASE_URL` to a PostgreSQL connection string:
+Set `DATABASE_URL` to a PostgreSQL connection string from your current Terraform/Secrets Manager credentials. For the local tunnel, use the forwarded localhost port without forcing SSL:
 
 ```text
-DATABASE_URL=postgresql://<username>:<password>@<rds-endpoint>:5432/<dbname>?sslmode=require
+DATABASE_URL=postgresql://<username>:<password>@127.0.0.1:5432/<dbname>
 ```
 
+If you need to confirm the username and password, fetch the secret named by the Terraform `secrets_arn` output and build the URL from that JSON payload.
+
 Then run `npm run db:init` to apply the PostgreSQL schema and seed the QA dashboard sample data.
+
+The tunnel script uses the Terraform outputs in `infra/terraform/`:
+
+```text
+bastion_id
+db_endpoint
+db_port
+```
 
 Recommended implementation order:
 

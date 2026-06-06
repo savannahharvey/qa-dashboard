@@ -8,10 +8,15 @@ Important notes:
 - Set `ssh_cidr` explicitly in `terraform.tfvars` before planning or applying.
 
 Bastion host:
-- Terraform now creates a Bastion host in a public subnet so you can test RDS connectivity from inside the VPC.
+- Terraform creates a Bastion host in a public subnet so you can reach the private RDS instance from your machine.
 - The Bastion host is accessible only from `ssh_cidr` on port 22.
 - The instance is launched with an SSM instance profile, so you can connect using AWS Systems Manager Session Manager without an SSH key pair.
 - After apply, the public IP is available as output `bastion_public_ip` and the instance ID is available as `bastion_id`.
+
+Local tunnel:
+- Use AWS Systems Manager port forwarding to send `localhost:5432` to the private RDS endpoint through the bastion.
+- While the tunnel is open, set `DATABASE_URL` to `postgresql://<username>:<password>@127.0.0.1:5432/<dbname>`.
+- The tunnel command should target the Terraform outputs `bastion_id`, `db_endpoint`, and `db_port`.
 
 Secrets Manager integration:
 - If you do not provide `db_password` in `terraform.tfvars`, Terraform will generate a strong password and store it in AWS Secrets Manager under the secret name `qa-dashboard-db-credentials`.
@@ -31,7 +36,7 @@ password=$(echo "$secret_json" | jq -r .password)
 endpoint=$(terraform output -raw db_endpoint)
 port=$(terraform output -raw db_port)
 dbname=$(terraform output -raw db_name)
-echo "postgresql://$username:$password@$endpoint:$port/$dbname?sslmode=require"
+echo "postgresql://$username:$password@$endpoint:$port/$dbname"
 ```
 
 PowerShell equivalent:
@@ -42,7 +47,7 @@ $secret = $secretJson | ConvertFrom-Json
 $endpoint = terraform output -raw db_endpoint
 $port = terraform output -raw db_port
 $dbname = terraform output -raw db_name
-"postgresql://$($secret.username):$($secret.password)@$endpoint`:$port/$dbname?sslmode=require"
+"postgresql://$($secret.username):$($secret.password)@$endpoint`:$port/$dbname"
 ```
 
 Quick start:
@@ -60,6 +65,6 @@ terraform plan -out plan.tfplan
 terraform apply plan.tfplan
 ```
 
-After apply, fetch DB endpoint from output `db_endpoint` and set your `DATABASE_URL` accordingly:
+After apply, fetch DB endpoint from output `db_endpoint` if you are connecting directly to RDS. When using the local tunnel, connect to `127.0.0.1:5432` without forcing SSL:
 
-postgresql://<username>:<password>@<endpoint>:<port>/<dbname>?sslmode=require
+postgresql://<username>:<password>@127.0.0.1:5432/<dbname>
