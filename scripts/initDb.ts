@@ -129,7 +129,13 @@ const postgresSql = {
      ON CONFLICT ("teamId", "source") DO UPDATE SET "settings" = excluded."settings", "enabled" = excluded."enabled", "updatedAt" = excluded."updatedAt"`,
 };
 
-const pool = openPostgresPool(databaseUrl);
+// const pool = openPostgresPool(databaseUrl);
+// Comment out the old dynamic fetching line:
+// const pool = openPostgresPool(databaseUrl);
+
+// Add this temporary hardcoded line using the root 'postgres' user:
+// const pool = openPostgresPool("postgresql://postgres:wPmQF94wJE-Pt8c737ZY@127.0.0.1:5433/qa_dashboard?sslmode=no-verify");
+const pool = openPostgresPool("postgresql://qa_admin:wPmQF94wJE-Pt8c737ZY@127.0.0.1:5999/qa_dashboard?sslmode=no-verify");
 
 try {
   await applyPostgresSchema(pool);

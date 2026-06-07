@@ -54,6 +54,11 @@ npm run db:init
 npm run dev
 ```
 
+Before running `npm run db:tunnel`, make sure both of these are installed and available on PATH:
+
+- AWS CLI
+- AWS Session Manager Plugin
+
 The default API URL is `http://localhost:4000`. The Vite frontend runs at `http://127.0.0.1:5173` and proxies API requests to the backend.
 
 The RDS instance is private. Use the bastion host and AWS Systems Manager port forwarding to reach it locally, then point `DATABASE_URL` at `127.0.0.1:5432` while the tunnel is open.
