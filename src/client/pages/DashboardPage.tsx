@@ -12,10 +12,12 @@ export function DashboardPage() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
     if (!primaryTeam) {
       setDashboard(null);
+      setError("");
       return;
     }
 
@@ -26,8 +28,25 @@ export function DashboardPage() {
       .then((nextDashboard) => {
         if (!cancelled) setDashboard(nextDashboard);
       })
-      .catch(() => {
-        if (!cancelled) setError("Dashboard data is unavailable right now.");
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setDashboard(null);
+        if (err instanceof ApiError) {
+          if (err.status === 401) {
+            setError("Your session expired. Please sign in again.");
+            void reloadSession();
+            return;
+          }
+          if (err.status === 403) {
+            setError("You do not have access to this team's dashboard.");
+            return;
+          }
+          if (err.status === 404) {
+            setError("That team could not be found.");
+            return;
+          }
+        }
+        setError("Dashboard data is unavailable right now.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -36,7 +55,13 @@ export function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [primaryTeam]);
+  }, [primaryTeam, refreshToken, reloadSession]);
+
+  async function handleRefreshDashboard() {
+    if (!primaryTeam) return;
+    await refreshMetrics(primaryTeam.id);
+    setRefreshToken((value) => value + 1);
+  }
 
   return (
     <AppShell>
@@ -44,7 +69,7 @@ export function DashboardPage() {
         {!primaryTeam ? <JoinTeamPanel onJoined={reloadSession} /> : null}
         {primaryTeam ? (
           <>
-            <DashboardHeader dashboard={dashboard} onRefresh={() => refreshMetrics(primaryTeam.id)} />
+            <DashboardHeader dashboard={dashboard} onRefresh={handleRefreshDashboard} />
             {loading ? <p className="muted">Loading dashboard...</p> : null}
             {error ? <p className="form-error">{error}</p> : null}
             {dashboard ? <TeamBoard dashboard={dashboard} /> : null}
