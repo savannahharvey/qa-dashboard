@@ -10,3 +10,5 @@ prisma/dev.db-journal
 data/*.db
 data/*.db-journal
 \.terraform/
+.terraform/
+**/.terraform/*
