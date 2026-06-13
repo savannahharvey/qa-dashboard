@@ -1,9 +1,14 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
+import { resolve } from "path";
 
 export default defineConfig({
   plugins: [react()],
-  base: '/qa-dashboard/', 
+  base: '/qa-dashboard/',
+  root: './', // Tells Vite to look at the root directory
+  build: {
+    outDir: 'dist', // Ensures the output folder is still called 'dist' at the root
+  },
   server: {
     port: 5173,
     proxy: {
