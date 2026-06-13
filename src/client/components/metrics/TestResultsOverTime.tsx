@@ -85,6 +85,27 @@ export function TestResultsOverTime(props: Props) {
         {pts.passed.map((p, i) => (
           <circle key={`p-${i}`} cx={p.x} cy={p.y} r={2.5} fill="#2ecc71" />
         ))}
+
+        {/* x-axis date labels */}
+        {rows.map((r, i) => {
+          const p = pts.total[i];
+          if (!p) return null;
+          let label = r.period;
+          try {
+            const d = new Date(r.period);
+            if (!Number.isNaN(d.getTime())) {
+              label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+            }
+          } catch (e) {
+            /* ignore */
+          }
+
+          return (
+            <text key={`l-${i}`} x={p.x} y={height - 6} fontSize={10} fill="#444" textAnchor="middle">
+              {label}
+            </text>
+          );
+        })}
       </svg>
 
       <div className="chart-legend">
