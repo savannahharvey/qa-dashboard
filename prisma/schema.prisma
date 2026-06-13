@@ -119,3 +119,17 @@ model MetricSourceConfig {
   @@unique([teamId, source])
   @@index([teamId])
 }
+
+model TestMetric {
+  id          String   @id @default(uuid())
+  repo        String
+  branch      String?
+  period      DateTime
+  granularity String
+  total       Int      @default(0)
+  passed      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+
+  @@index([repo, branch, period])
+}

@@ -103,6 +103,21 @@ async function seed(run: (sql: string, values: unknown[]) => Promise<void>, sql:
     timestamp,
     timestamp,
   ]);
+
+  // Seed demo TestMetric rows (past 14 days) for a sample repo/branch
+  const demoRepo = "sample-repo";
+  const demoBranch = "main";
+  const days = 14;
+  for (let i = days; i >= 0; i--) {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - i);
+    d.setUTCHours(0, 0, 0, 0);
+    const periodIso = d.toISOString();
+    const id = `testmetric-${d.toISOString().slice(0, 10)}`;
+    const total = 80 + (days - i) * 3 + (i % 5);
+    const passed = Math.max(0, total - (i % 7));
+    await run(sql.testMetric, [id, demoRepo, demoBranch, periodIso, "day", total, passed, timestamp, timestamp]);
+  }
 }
 
 const postgresSql = {
@@ -127,6 +142,9 @@ const postgresSql = {
   metricSourceConfig: `INSERT INTO "MetricSourceConfig" ("id", "teamId", "source", "settings", "enabled", "createdAt", "updatedAt")
      VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT ("teamId", "source") DO UPDATE SET "settings" = excluded."settings", "enabled" = excluded."enabled", "updatedAt" = excluded."updatedAt"`,
+    testMetric: `INSERT INTO "TestMetric" ("id", "repo", "branch", "period", "granularity", "total", "passed", "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ON CONFLICT ("id") DO UPDATE SET "total" = excluded."total", "passed" = excluded."passed", "updatedAt" = excluded."updatedAt"`,
 };
 
 // const pool = openPostgresPool(databaseUrl);

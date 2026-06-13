@@ -99,3 +99,17 @@ CREATE INDEX IF NOT EXISTS "QaMetric_teamId_source_idx" ON "QaMetric"("teamId", 
 CREATE INDEX IF NOT EXISTS "QaMetric_measuredAt_idx" ON "QaMetric"("measuredAt");
 CREATE INDEX IF NOT EXISTS "MetricSourceConfig_teamId_idx" ON "MetricSourceConfig"("teamId");
 CREATE UNIQUE INDEX IF NOT EXISTS "MetricSourceConfig_teamId_source_key" ON "MetricSourceConfig"("teamId", "source");
+
+CREATE TABLE IF NOT EXISTS "TestMetric" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "repo" TEXT NOT NULL,
+    "branch" TEXT,
+    "period" TIMESTAMPTZ NOT NULL,
+    "granularity" TEXT NOT NULL,
+    "total" INTEGER NOT NULL DEFAULT 0,
+    "passed" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS "TestMetric_repo_branch_period_idx" ON "TestMetric"("repo", "branch", "period");

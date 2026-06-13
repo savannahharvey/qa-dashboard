@@ -85,3 +85,16 @@ export function refreshMetrics(teamId: string) {
     body: JSON.stringify({ source: "azure-devops" }),
   });
 }
+
+export type TestsOverTimeRow = { period: string; total: number; passed: number };
+
+export function getTestsOverTime(opts?: { repo?: string; branch?: string; from?: string; to?: string; granularity?: string }) {
+  const q = new URLSearchParams();
+  if (opts?.repo) q.set("repo", opts.repo);
+  if (opts?.branch) q.set("branch", opts.branch);
+  if (opts?.from) q.set("from", opts.from);
+  if (opts?.to) q.set("to", opts.to);
+  if (opts?.granularity) q.set("granularity", opts.granularity);
+
+  return requestJson<{ data: TestsOverTimeRow[]; meta: any }>(`/api/metrics/tests-over-time?${q.toString()}`);
+}

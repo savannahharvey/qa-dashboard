@@ -29,6 +29,7 @@ export type DashboardRepository = {
   findTestSuitesByTeam(teamId: string): Promise<TestSuite[]>;
   findMetricsByTeam(teamId: string): Promise<QaMetric[]>;
   findGoalsByTeam(teamId: string): Promise<GoalWithOwner[]>;
+  getTestsOverTime(repo?: string, branch?: string, from?: string, to?: string, granularity?: string): Promise<{ period: string; total: number; passed: number }[]>;
 };
 
 
@@ -168,6 +169,38 @@ export function createPostgresRepository(pool: Pool): DashboardRepository {
           [teamId],
         ),
       );
+    },
+    async getTestsOverTime(repo, branch, from, to, granularity) {
+      const params: any[] = [];
+      const where: string[] = [];
+      let idx = 1;
+
+      if (repo) {
+        where.push(`"repo" = $${idx++}`);
+        params.push(repo);
+      }
+      if (branch) {
+        where.push(`"branch" = $${idx++}`);
+        params.push(branch);
+      }
+      if (from) {
+        where.push(`"period" >= $${idx++}`);
+        params.push(from);
+      }
+      if (to) {
+        where.push(`"period" <= $${idx++}`);
+        params.push(to);
+      }
+      if (granularity) {
+        where.push(`"granularity" = $${idx++}`);
+        params.push(granularity);
+      }
+
+      const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+      const q = `SELECT "period", "total", "passed" FROM "TestMetric" ${whereClause} ORDER BY "period" ASC`;
+      const result = await pool.query(q, params);
+
+      return (result.rows || []).map((r: any) => ({ period: r.period instanceof Date ? r.period.toISOString() : r.period, total: Number(r.total), passed: Number(r.passed) }));
     },
   };
 }

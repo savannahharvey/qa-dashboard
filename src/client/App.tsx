@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import type { ReactNode } from "react";
 import { CreateGoalPage } from "./pages/CreateGoalPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { TestResultsPage } from "./pages/TestResultsPage";
 import { HomePage } from "./pages/HomePage";
 import { SignInPage } from "./pages/SignInPage";
 import { SignUpPage } from "./pages/SignUpPage";
@@ -18,6 +19,14 @@ export function App() {
         element={
           <RequireAuth>
             <DashboardPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/dashboard/test-results"
+        element={
+          <RequireAuth>
+            <TestResultsPage />
           </RequireAuth>
         }
       />

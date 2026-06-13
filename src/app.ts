@@ -2,6 +2,7 @@ import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
 import { authRoutes } from "./routes/authRoutes.js";
 import { teamRoutes } from "./routes/teamRoutes.js";
+import { metricsRoutes } from "./routes/metricsRoutes.js";
 
 export function createApp() {
   const app = express();
@@ -15,6 +16,7 @@ export function createApp() {
 
   app.use("/api/auth", authRoutes);
   app.use("/api/teams", teamRoutes);
+  app.use("/api/metrics", metricsRoutes);
 
   app.use((_req, res) => {
     res.status(404).json({ error: "Not found" });
