@@ -17,7 +17,7 @@
     "test:watch": "vitest",
     "db:init": "tsx scripts/initDb.ts",
     "predeploy": "npm run build",
-    "deploy": "git add dist -f && git commit -m \"Deploy build\" --allow-empty && git push origin main && git push origin main:gh-pages --force"
+    "deploy": "git add dist -f && git commit -m \"Deploy build\" --allow-empty && git push origin main && git subtree push --prefix dist origin gh-pages"
   },
   "dependencies": {
     "@types/pg": "^8.20.0",
