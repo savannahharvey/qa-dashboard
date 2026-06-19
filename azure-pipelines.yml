@@ -60,12 +60,12 @@ jobs:
       - script: npm run db:init
         displayName: Seed the test database
         env:
-          DATABASE_URL: postgresql://qa_admin:wPmQF94wJE-Pt8c737ZY@127.0.0.1:5999/qa_dashboard?sslmode=no-verify
+          DATABASE_URL: postgresql://qa_admin:wPmQF94wJE-Pt8c737ZY@127.0.0.1:5999/qa_dashboard?sslmode=disable
           DB_SSL: 'false'
 
       - script: npm run test:pw
         displayName: Run Playwright tests
         env:
           CI: "true"
-          DATABASE_URL: postgresql://qa_admin:wPmQF94wJE-Pt8c737ZY@127.0.0.1:5999/qa_dashboard?sslmode=no-verify
+          DATABASE_URL: postgresql://qa_admin:wPmQF94wJE-Pt8c737ZY@127.0.0.1:5999/qa_dashboard?sslmode=disable
           DB_SSL: 'false'
