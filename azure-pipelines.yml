@@ -59,8 +59,8 @@ jobs:
 
       - script: |
           mkdir -p test-results
-          npx playwright test --reporter=junit=test-results/playwright-junit.xml
-        displayName: Run Playwright tests (generate JUnit)
+          npx playwright test
+        displayName: Run Playwright tests
         env:
           CI: "true"
           DATABASE_URL: postgresql://qa_admin:wPmQF94wJE-Pt8c737ZY@127.0.0.1:5999/qa_dashboard?sslmode=disable
