@@ -142,18 +142,12 @@ const postgresSql = {
   metricSourceConfig: `INSERT INTO "MetricSourceConfig" ("id", "teamId", "source", "settings", "enabled", "createdAt", "updatedAt")
      VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT ("teamId", "source") DO UPDATE SET "settings" = excluded."settings", "enabled" = excluded."enabled", "updatedAt" = excluded."updatedAt"`,
-    testMetric: `INSERT INTO "TestMetric" ("id", "repo", "branch", "period", "granularity", "total", "passed", "createdAt", "updatedAt")
+  testMetric: `INSERT INTO "TestMetric" ("id", "repo", "branch", "period", "granularity", "total", "passed", "createdAt", "updatedAt")
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT ("id") DO UPDATE SET "total" = excluded."total", "passed" = excluded."passed", "updatedAt" = excluded."updatedAt"`,
 };
 
-// const pool = openPostgresPool(databaseUrl);
-// Comment out the old dynamic fetching line:
-// const pool = openPostgresPool(databaseUrl);
-
-// Add this temporary hardcoded line using the root 'postgres' user:
-// const pool = openPostgresPool("postgresql://postgres:wPmQF94wJE-Pt8c737ZY@127.0.0.1:5433/qa_dashboard?sslmode=no-verify");
-const pool = openPostgresPool("postgresql://qa_admin:wPmQF94wJE-Pt8c737ZY@127.0.0.1:5999/qa_dashboard?sslmode=no-verify");
+const pool = openPostgresPool(databaseUrl);
 
 try {
   await applyPostgresSchema(pool);

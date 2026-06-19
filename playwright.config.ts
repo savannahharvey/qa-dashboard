@@ -1,4 +1,6 @@
+/// <reference types="node" />
 import { defineConfig, devices } from '@playwright/test';
+import { env } from 'process';
 
 export default defineConfig({
   testDir: 'e2e',
@@ -10,8 +12,8 @@ export default defineConfig({
   },
   webServer: {
     // Start both API and web dev servers so e2e can exercise API endpoints.
-    command: 'npm run dev',
+    command: env.CI ? 'npm run dev:ci' : 'npm run dev',
     port: 5173,
-    reuseExistingServer: true,
+    reuseExistingServer: !env.CI,
   },
 });
