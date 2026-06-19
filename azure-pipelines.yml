@@ -57,9 +57,19 @@ jobs:
           DATABASE_URL: postgresql://qa_admin:wPmQF94wJE-Pt8c737ZY@127.0.0.1:5999/qa_dashboard?sslmode=disable
           DB_SSL: 'false'
 
-      - script: npm run test:pw
-        displayName: Run Playwright tests
+      - script: |
+          mkdir -p test-results
+          npx playwright test --reporter=junit=test-results/playwright-junit.xml
+        displayName: Run Playwright tests (generate JUnit)
         env:
           CI: "true"
           DATABASE_URL: postgresql://qa_admin:wPmQF94wJE-Pt8c737ZY@127.0.0.1:5999/qa_dashboard?sslmode=disable
           DB_SSL: 'false'
+
+      - task: PublishTestResults@2
+        displayName: Publish Playwright JUnit results
+        inputs:
+          testResultsFormat: JUnit
+          testResultsFiles: '**/test-results/playwright-junit.xml'
+          mergeTestResults: true
+          failTaskOnFailedTests: true
