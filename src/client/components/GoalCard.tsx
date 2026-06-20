@@ -27,11 +27,11 @@ export function GoalCard({ goal, compact = false }: { goal: Goal; compact?: bool
       </div>
       <div className="goal-values">
         <span>
-          {goal.currentValue}
+          <strong>{goal.currentValue}</strong>
           {goal.unit ?? ""}
         </span>
         <span>
-          target {goal.targetValue}
+          target <strong>{goal.targetValue}</strong>
           {goal.unit ?? ""}
         </span>
       </div>

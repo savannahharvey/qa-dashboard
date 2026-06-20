@@ -6,7 +6,17 @@ type Diagnostic = { source: "azure-devops"; message: string };
 type AzureSettings = {
   organizationEnv?: string;
   projectEnv?: string;
+  organization?: string;
+  project?: string;
+  buildDefinitionId?: number;
+  tokenEnv?: string;
   categoryMap?: Partial<Record<"unit" | "api" | "ui", { runTitleIncludes?: string; buildDefinitionId?: number }>>;
+};
+
+export type AzurePipelineDefinition = {
+  id: number;
+  name: string;
+  path?: string;
 };
 
 const categories: TestCategory[] = ["UNIT", "API", "UI"];
@@ -25,9 +35,9 @@ export async function refreshAzureMetrics(repository: DashboardRepository, teamI
   }
 
   const settings = parseSettings(config.settings);
-  const organization = getEnv(settings.organizationEnv ?? "AZURE_DEVOPS_ORG");
-  const project = getEnv(settings.projectEnv ?? "AZURE_DEVOPS_PROJECT");
-  const token = getEnv("AZURE_DEVOPS_PAT");
+  const organization = settings.organization ?? getEnv(settings.organizationEnv ?? "AZURE_DEVOPS_ORG");
+  const project = settings.project ?? getEnv(settings.projectEnv ?? "AZURE_DEVOPS_PROJECT");
+  const token = getEnv(settings.tokenEnv ?? "AZURE_DEVOPS_PAT");
 
   if (!organization || !project || !token) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps organization, project, or token configuration is missing." });
@@ -45,6 +55,34 @@ export async function refreshAzureMetrics(repository: DashboardRepository, teamI
     const metrics = unavailableMetrics(teamId, refreshedAt);
     await repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
     return formatRefreshResponse(refreshedAt, metrics, diagnostics);
+  }
+}
+
+export async function listAzurePipelines(repository: DashboardRepository, teamId: string) {
+  const diagnostics: Diagnostic[] = [];
+  const config = await repository.findMetricSourceConfig(teamId, "AZURE_DEVOPS");
+
+  if (!config || (config.enabled !== 1 && config.enabled !== true)) {
+    diagnostics.push({ source: "azure-devops", message: "Azure DevOps configuration is not enabled." });
+    return { pipelines: [] as AzurePipelineDefinition[], diagnostics };
+  }
+
+  const settings = parseSettings(config.settings);
+  const organization = settings.organization ?? getEnv(settings.organizationEnv ?? "AZURE_DEVOPS_ORG");
+  const project = settings.project ?? getEnv(settings.projectEnv ?? "AZURE_DEVOPS_PROJECT");
+  const token = getEnv(settings.tokenEnv ?? "AZURE_DEVOPS_PAT");
+
+  if (!organization || !project || !token) {
+    diagnostics.push({ source: "azure-devops", message: "Azure DevOps organization, project, or token configuration is missing." });
+    return { pipelines: [] as AzurePipelineDefinition[], diagnostics };
+  }
+
+  try {
+    const pipelines = await fetchAzurePipelineDefinitions(organization, project, token);
+    return { pipelines, diagnostics };
+  } catch {
+    diagnostics.push({ source: "azure-devops", message: "Azure DevOps pipelines could not be loaded." });
+    return { pipelines: [] as AzurePipelineDefinition[], diagnostics };
   }
 }
 
@@ -102,13 +140,37 @@ function selectRun(runs: Array<Record<string, unknown>>, category: TestCategory,
   const apiCategory = categoryApiValues[category];
   const mapping = settings.categoryMap?.[apiCategory];
   const titleNeedle = mapping?.runTitleIncludes ?? apiCategory;
-  const buildDefinitionId = mapping?.buildDefinitionId;
+  const buildDefinitionId = mapping?.buildDefinitionId ?? settings.buildDefinitionId;
 
   return runs.find((run) => {
     const name = String(run.name ?? run.title ?? "").toLowerCase();
     const definitionId = Number((run.buildConfiguration as { id?: number } | undefined)?.id ?? run.buildDefinitionId);
     return name.includes(titleNeedle.toLowerCase()) && (!buildDefinitionId || definitionId === buildDefinitionId);
   });
+}
+
+async function fetchAzurePipelineDefinitions(organization: string, project: string, token: string) {
+  const auth = Buffer.from(`:${token}`).toString("base64");
+  const url = `https://dev.azure.com/${encodeURIComponent(organization)}/${encodeURIComponent(project)}/_apis/build/definitions?api-version=7.1`;
+  const response = await fetch(url, {
+    headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error("Azure pipeline definitions request failed");
+  }
+
+  const body = (await response.json()) as { value?: Array<Record<string, unknown>> };
+  const definitions = Array.isArray(body.value) ? body.value : [];
+
+  return definitions
+    .map((definition) => ({
+      id: Number(definition.id),
+      name: String(definition.name ?? definition.path ?? `Pipeline ${definition.id}`),
+      path: typeof definition.path === "string" ? definition.path : undefined,
+    }))
+    .filter((definition) => Number.isFinite(definition.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function mapOutcomes(outcomes: Array<string | undefined>): MetricStatus {

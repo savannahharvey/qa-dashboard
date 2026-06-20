@@ -1,11 +1,44 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { ApiError, getDashboard, joinTeam, refreshMetrics } from "../api";
+import {
+  ApiError,
+  getAzurePipelines,
+  getDashboard,
+  getMetricSourceConfig,
+  joinTeam,
+  refreshMetrics,
+  saveMetricSourceConfig,
+  type AzurePipelineDefinition,
+} from "../api";
 import { AppShell } from "../components/AppShell";
 import { GoalCard } from "../components/GoalCard";
 import { categoryLabels, formatMetricValue, groupGoals, metricLabels, statusClass } from "../domain/display";
 import { useAuth } from "../state/AuthContext";
 import type { Dashboard } from "../types";
+
+type AzureConfigDraft = {
+  enabled: boolean;
+  organization: string;
+  project: string;
+  buildDefinitionId: string;
+  categoryMap: {
+    unit: string;
+    api: string;
+    ui: string;
+  };
+};
+
+const defaultAzureDraft = (): AzureConfigDraft => ({
+  enabled: false,
+  organization: "",
+  project: "",
+  buildDefinitionId: "",
+  categoryMap: {
+    unit: "unit",
+    api: "api",
+    ui: "ui",
+  },
+});
 
 export function DashboardPage() {
   const { primaryTeam, reloadSession } = useAuth();
@@ -63,6 +96,12 @@ export function DashboardPage() {
     setRefreshToken((value) => value + 1);
   }
 
+  async function handleAzureConfigSaved() {
+    if (!primaryTeam) return;
+    await refreshMetrics(primaryTeam.id);
+    setRefreshToken((value) => value + 1);
+  }
+
   return (
     <AppShell>
       <main className="dashboard-page">
@@ -70,6 +109,7 @@ export function DashboardPage() {
         {primaryTeam ? (
           <>
             <DashboardHeader dashboard={dashboard} onRefresh={handleRefreshDashboard} />
+            <AzureDevOpsConfigPanel teamId={primaryTeam.id} onSaved={handleAzureConfigSaved} />
             {loading ? <p className="muted">Loading dashboard...</p> : null}
             {error ? <p className="form-error">{error}</p> : null}
             {dashboard ? <TeamBoard dashboard={dashboard} /> : null}
@@ -113,6 +153,288 @@ function DashboardHeader({ dashboard, onRefresh }: { dashboard: Dashboard | null
           Create goal
         </Link>
       </div>
+    </section>
+  );
+}
+
+function AzureDevOpsConfigPanel({ teamId, onSaved }: { teamId: string; onSaved: () => Promise<unknown> }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [pipelinesMessage, setPipelinesMessage] = useState("");
+  const [error, setError] = useState("");
+  const [pipelines, setPipelines] = useState<AzurePipelineDefinition[]>([]);
+  const [pipelinesLoading, setPipelinesLoading] = useState(false);
+  const [draft, setDraft] = useState<AzureConfigDraft>(defaultAzureDraft);
+  const selectedPipeline = useMemo(
+    () => pipelines.find((pipeline) => String(pipeline.id) === draft.buildDefinitionId),
+    [draft.buildDefinitionId, pipelines],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAzureConfig() {
+      setLoading(true);
+      setPipelinesLoading(true);
+      setError("");
+      setPipelinesMessage("");
+
+      try {
+        const { config } = await getMetricSourceConfig(teamId);
+        if (cancelled) return;
+
+        const settings = config?.settings ?? {};
+        const categoryMap = settings.categoryMap ?? {};
+
+        setDraft({
+          enabled: config?.enabled ?? false,
+          organization: typeof settings.organization === "string" ? settings.organization : "",
+          project: typeof settings.project === "string" ? settings.project : "",
+          buildDefinitionId: typeof settings.buildDefinitionId === "number" ? String(settings.buildDefinitionId) : "",
+          categoryMap: {
+            unit: categoryMap.unit?.runTitleIncludes ?? "unit",
+            api: categoryMap.api?.runTitleIncludes ?? "api",
+            ui: categoryMap.ui?.runTitleIncludes ?? "ui",
+          },
+        });
+
+        if (config?.enabled) {
+          const pipelinesResponse = await getAzurePipelines(teamId);
+          if (!cancelled) {
+            setPipelines(pipelinesResponse.pipelines);
+            setPipelinesMessage(
+              pipelinesResponse.pipelines.length > 0 ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.` : "No pipelines were found.",
+            );
+          }
+        } else if (!cancelled) {
+          setPipelines([]);
+          setPipelinesMessage("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : "Could not load Azure settings.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setPipelinesLoading(false);
+        }
+      }
+    }
+
+    void loadAzureConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [teamId]);
+
+  async function handleReloadPipelines() {
+    if (!draft.enabled) {
+      setPipelines([]);
+      setPipelinesMessage("Enable Azure DevOps metrics before loading pipelines.");
+      return;
+    }
+
+    if (!draft.organization.trim() || !draft.project.trim()) {
+      setPipelines([]);
+      setPipelinesMessage("Organization and project are required to load pipelines.");
+      return;
+    }
+
+    setPipelinesLoading(true);
+    setError("");
+    setPipelinesMessage("");
+
+    try {
+      const pipelinesResponse = await getAzurePipelines(teamId);
+      setPipelines(pipelinesResponse.pipelines);
+      setPipelinesMessage(
+        pipelinesResponse.pipelines.length > 0 ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.` : "No pipelines were found.",
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not reload Azure pipelines.");
+    } finally {
+      setPipelinesLoading(false);
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const buildDefinitionId = draft.buildDefinitionId.trim() ? Number(draft.buildDefinitionId) : undefined;
+      await saveMetricSourceConfig(teamId, {
+        source: "AZURE_DEVOPS",
+        enabled: draft.enabled,
+        settings: {
+          organization: draft.organization.trim(),
+          project: draft.project.trim(),
+          ...(Number.isFinite(buildDefinitionId) ? { buildDefinitionId } : {}),
+          categoryMap: {
+            unit: { runTitleIncludes: draft.categoryMap.unit.trim() || "unit" },
+            api: { runTitleIncludes: draft.categoryMap.api.trim() || "api" },
+            ui: { runTitleIncludes: draft.categoryMap.ui.trim() || "ui" },
+          },
+        },
+      });
+      const reloaded = await getMetricSourceConfig(teamId);
+      const settings = reloaded.config?.settings ?? {};
+      const categoryMap = settings.categoryMap ?? {};
+      setDraft({
+        enabled: reloaded.config?.enabled ?? false,
+        organization: typeof settings.organization === "string" ? settings.organization : "",
+        project: typeof settings.project === "string" ? settings.project : "",
+        buildDefinitionId: typeof settings.buildDefinitionId === "number" ? String(settings.buildDefinitionId) : "",
+        categoryMap: {
+          unit: categoryMap.unit?.runTitleIncludes ?? "unit",
+          api: categoryMap.api?.runTitleIncludes ?? "api",
+          ui: categoryMap.ui?.runTitleIncludes ?? "ui",
+        },
+      });
+      if (reloaded.config?.enabled) {
+        try {
+          const pipelinesResponse = await getAzurePipelines(teamId);
+          setPipelines(pipelinesResponse.pipelines);
+          setPipelinesMessage(
+            pipelinesResponse.pipelines.length > 0 ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.` : "No pipelines were found.",
+          );
+        } catch {
+          setPipelines([]);
+          setPipelinesMessage("Pipeline list could not be refreshed.");
+        }
+      } else {
+        setPipelines([]);
+        setPipelinesMessage("");
+      }
+      await onSaved();
+      setMessage("Azure DevOps settings saved.");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save Azure settings.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="board-section">
+      <div className="section-title">
+        <div>
+          <span className="eyebrow">Azure DevOps</span>
+          <h2>Connection settings</h2>
+        </div>
+        <span className="muted">{loading ? "Loading..." : draft.enabled ? "Enabled" : "Disabled"}</span>
+      </div>
+
+      <p className="muted">
+        Save your Azure DevOps organization and project here. The PAT stays server-side in environment variables.
+      </p>
+
+      <form className="stacked-form" onSubmit={handleSubmit}>
+        <label className="inline-toggle">
+          <input
+            type="checkbox"
+            checked={draft.enabled}
+            onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.checked }))}
+          />
+          <span>Enable Azure DevOps metrics</span>
+        </label>
+
+        <label>
+          <span>Organization</span>
+          <input
+            value={draft.organization}
+            onChange={(event) => setDraft((current) => ({ ...current, organization: event.target.value }))}
+            placeholder="your-organization"
+          />
+        </label>
+
+        <label>
+          <span>Project</span>
+          <input
+            value={draft.project}
+            onChange={(event) => setDraft((current) => ({ ...current, project: event.target.value }))}
+            placeholder="your-project"
+          />
+        </label>
+
+        <label>
+          <span>Pipeline</span>
+          <select
+            value={draft.buildDefinitionId}
+            onChange={(event) => setDraft((current) => ({ ...current, buildDefinitionId: event.target.value }))}
+            disabled={pipelinesLoading || pipelines.length === 0}
+          >
+            <option value="">Any pipeline</option>
+            {pipelines.map((pipeline) => (
+              <option key={pipeline.id} value={pipeline.id}>
+                {pipeline.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="azure-pipeline-meta">
+          <span className="muted">
+            {selectedPipeline ? `Selected pipeline: ${selectedPipeline.name}` : "Selected pipeline: Any pipeline"}
+          </span>
+          <button className="button secondary" type="button" onClick={handleReloadPipelines} disabled={pipelinesLoading}>
+            {pipelinesLoading ? "Reloading..." : "Reload pipelines"}
+          </button>
+        </div>
+        {pipelinesMessage ? <p className="muted azure-pipeline-message">{pipelinesMessage}</p> : null}
+
+        <div className="metrics-grid azure-config-grid">
+          <label>
+            <span>Unit run title includes</span>
+            <input
+              value={draft.categoryMap.unit}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  categoryMap: { ...current.categoryMap, unit: event.target.value },
+                }))
+              }
+            />
+          </label>
+          <label>
+            <span>API run title includes</span>
+            <input
+              value={draft.categoryMap.api}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  categoryMap: { ...current.categoryMap, api: event.target.value },
+                }))
+              }
+            />
+          </label>
+          <label>
+            <span>UI run title includes</span>
+            <input
+              value={draft.categoryMap.ui}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  categoryMap: { ...current.categoryMap, ui: event.target.value },
+                }))
+              }
+            />
+          </label>
+        </div>
+
+        <div className="header-actions">
+          {message ? <span className="muted">{message}</span> : null}
+          <button className="button secondary" type="submit" disabled={saving || loading}>
+            {saving ? "Saving..." : "Save Azure settings"}
+          </button>
+        </div>
+      </form>
+
+      {error ? <p className="form-error">{error}</p> : null}
     </section>
   );
 }

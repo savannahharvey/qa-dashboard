@@ -4,7 +4,15 @@ import { MemoryRouter } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ApiError, getDashboard, joinTeam, refreshMetrics } from "../api";
+import {
+  ApiError,
+  getAzurePipelines,
+  getDashboard,
+  getMetricSourceConfig,
+  joinTeam,
+  refreshMetrics,
+  saveMetricSourceConfig,
+} from "../api";
 import { DashboardPage } from "./DashboardPage";
 import type { Dashboard, Goal, Team } from "../types";
 
@@ -16,15 +24,22 @@ vi.mock("../api", async () => {
   const actual = await vi.importActual<typeof import("../api")>("../api");
   return {
     ...actual,
+    getAzurePipelines: vi.fn(),
     getDashboard: vi.fn(),
+    getMetricSourceConfig: vi.fn(),
     joinTeam: vi.fn(),
     refreshMetrics: vi.fn(),
+    saveMetricSourceConfig: vi.fn(),
   };
 });
 
 import { useAuth } from "../state/AuthContext";
 
 const useAuthMock = vi.mocked(useAuth);
+
+vi.mocked(getMetricSourceConfig).mockResolvedValue({ config: null });
+vi.mocked(getAzurePipelines).mockResolvedValue({ pipelines: [], diagnostics: [] });
+vi.mocked(saveMetricSourceConfig).mockResolvedValue({ ok: true });
 
 describe("DashboardPage", () => {
   it("renders the live dashboard data and a loading state", async () => {

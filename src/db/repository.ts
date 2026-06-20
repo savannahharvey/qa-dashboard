@@ -1,4 +1,7 @@
+import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
+import { getDatabaseUrl } from "./databaseUrl.js";
+import { openPostgresPool } from "./postgres.js";
 import type { Goal, GoalWithOwner, MetricSource, QaMetric, Team, TestSuite, User } from "../domain/types.js";
 
 export type PublicTeam = Pick<Team, "id" | "name">;
@@ -25,6 +28,7 @@ export type DashboardRepository = {
   createGoal(goal: Goal): Promise<void>;
   findGoal(goalId: string): Promise<Goal | undefined>;
   findMetricSourceConfig(teamId: string, source: MetricSource): Promise<MetricSourceConfig | undefined>;
+  upsertMetricSourceConfig(teamId: string, source: MetricSource, settings: string, enabled: number | boolean): Promise<void>;
   replaceMetricsBySource(teamId: string, source: MetricSource, metrics: QaMetric[]): Promise<void>;
   findTestSuitesByTeam(teamId: string): Promise<TestSuite[]>;
   findMetricsByTeam(teamId: string): Promise<QaMetric[]>;
@@ -114,6 +118,14 @@ export function createPostgresRepository(pool: Pool): DashboardRepository {
       return one<MetricSourceConfig>(
         await pool.query(`SELECT * FROM "MetricSourceConfig" WHERE "teamId" = $1 AND "source" = $2`, [teamId, source]),
       );
+    },
+    async upsertMetricSourceConfig(teamId, source, settings, enabled) {
+      const config =
+        typeof source === "object" && source !== null && settings === undefined
+          ? source
+          : { source, enabled, settings };
+
+      await persistMetricSourceConfig(pool, teamId, config.source, config.settings, config.enabled);
     },
     async replaceMetricsBySource(teamId, source, metrics) {
       const client = await pool.connect();
@@ -224,5 +236,44 @@ function normalizeRow(row: unknown) {
 
   return Object.fromEntries(
     Object.entries(row).map(([key, value]) => [key, value instanceof Date ? value.toISOString() : value]),
+  );
+}
+
+export async function upsertMetricSourceConfig(
+  teamId: string,
+  config: {
+    source: string;
+    enabled: boolean;
+    settings: {
+      organization: string;
+      project: string;
+      categoryMap: {
+        unit: { runTitleIncludes: string };
+        api: { runTitleIncludes: string };
+        ui: { runTitleIncludes: string };
+      };
+    };
+  },
+) {
+  const pool = openPostgresPool(getDatabaseUrl());
+  try {
+    await persistMetricSourceConfig(pool, teamId, config.source, JSON.stringify(config.settings), config.enabled);
+  } finally {
+    await pool.end();
+  }
+}
+
+async function persistMetricSourceConfig(
+  pool: Pool,
+  teamId: string,
+  source: string,
+  settings: string | { organization: string; project: string; categoryMap: { unit: { runTitleIncludes: string }; api: { runTitleIncludes: string }; ui: { runTitleIncludes: string } } },
+  enabled: number | boolean | undefined,
+) {
+  await pool.query(
+    `INSERT INTO "MetricSourceConfig" ("id", "teamId", "source", "settings", "enabled", "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, now(), now())
+     ON CONFLICT ("teamId", "source") DO UPDATE SET "settings" = excluded."settings", "enabled" = excluded."enabled", "updatedAt" = now()`,
+    [randomUUID(), teamId, source, typeof settings === "string" ? settings : JSON.stringify(settings), enabled ?? false],
   );
 }

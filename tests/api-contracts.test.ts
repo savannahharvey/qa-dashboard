@@ -276,6 +276,67 @@ describe("goal creation API contracts", () => {
 });
 
 describe("Azure DevOps metric refresh API contracts", () => {
+  it("returns the saved Azure DevOps metric source config", async () => {
+    enableAzureConfig();
+    const agent = await signedInMember("azureconfigread");
+
+    const response = await agent.get("/api/teams/team-qa/metrics/config").expect(200);
+
+    expect(response.body.config).toEqual(
+      expect.objectContaining({
+        source: "AZURE_DEVOPS",
+        enabled: true,
+        settings: expect.objectContaining({
+          organizationEnv: "AZURE_DEVOPS_ORG",
+          projectEnv: "AZURE_DEVOPS_PROJECT",
+        }),
+      }),
+    );
+  });
+
+  it("hides seeded mock metrics and suites when Azure is enabled", async () => {
+    enableAzureConfig();
+    const agent = await signedInMember("azureonly");
+
+    const dashboard = await agent.get("/api/teams/team-qa/dashboard").expect(200);
+
+    expect(dashboard.body.metrics).toEqual([]);
+    expect(dashboard.body.testSuites).toEqual([]);
+  });
+
+  it("returns Azure build definitions for the current team", async () => {
+    enableAzureConfig();
+    process.env.AZURE_DEVOPS_ORG = "org";
+    process.env.AZURE_DEVOPS_PROJECT = "project";
+    process.env.AZURE_DEVOPS_PAT = "secret-token";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request) => {
+        const url = typeof input === "string" ? input : "url" in input ? input.url : String(input);
+        if (url.includes("/_apis/build/definitions?")) {
+          return jsonResponse({
+            value: [
+              { id: 11, name: "Nightly Pipeline" },
+              { id: 7, name: "PR Validation", path: "\\CI" },
+            ],
+          });
+        }
+
+        return { ok: false, json: async () => ({}) } as Response;
+      }),
+    );
+
+    const agent = await signedInMember("azurepipelines");
+    const response = await agent.get("/api/teams/team-qa/metrics/azure/pipelines").expect(200);
+
+    expect(response.body.pipelines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 11, name: "Nightly Pipeline" }),
+        expect.objectContaining({ id: 7, name: "PR Validation" }),
+      ]),
+    );
+  });
+
   it("returns stable unavailable metrics when Azure config is missing", async () => {
     const agent = await signedInMember("azuremissing");
 
@@ -329,6 +390,45 @@ describe("Azure DevOps metric refresh API contracts", () => {
     expect(JSON.stringify(response.body)).not.toContain("secret-token");
     const allMetrics = await inMemory.findMetricsByTeam("team-qa");
     expect(allMetrics.filter((m) => m.source === "AZURE_DEVOPS")).toHaveLength(6);
+  });
+
+  it("prefers the configured build definition when matching Azure runs", async () => {
+    enableAzureConfig(
+      { buildDefinitionId: 2 },
+      {
+        unit: "shared",
+        api: "shared",
+        ui: "shared",
+      },
+    );
+    process.env.AZURE_DEVOPS_ORG = "org";
+    process.env.AZURE_DEVOPS_PROJECT = "project";
+    process.env.AZURE_DEVOPS_PAT = "secret-token";
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = typeof input === "string" ? input : "url" in input ? input.url : String(input);
+      if (url.includes("/_apis/test/runs?")) {
+        return jsonResponse({
+          value: [
+            { id: 1, name: "shared pipeline", buildConfiguration: { id: 1 } },
+            { id: 2, name: "shared pipeline", buildConfiguration: { id: 2 } },
+          ],
+        });
+      }
+
+      if (url.includes("/runs/2/results")) {
+        return jsonResponse({ value: [{ outcome: "Passed" }] });
+      }
+
+      return { ok: false, json: async () => ({}) } as Response;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const agent = await signedInMember("azurebuildid");
+
+    const response = await agent.post("/api/teams/team-qa/metrics/refresh").send({ source: "azure-devops" }).expect(200);
+
+    expect(response.body.metrics).toEqual(
+      expect.arrayContaining([expect.objectContaining({ category: "unit", status: "passing" })]),
+    );
   });
 
   it("returns unavailable metrics when Azure requests fail", async () => {
@@ -453,7 +553,10 @@ function seedDashboardFixture() {
   }
 }
 
-function enableAzureConfig() {
+function enableAzureConfig(
+  overrides: { buildDefinitionId?: number } = {},
+  categoryMapTitles: { unit?: string; api?: string; ui?: string } = {},
+) {
   const now = new Date().toISOString();
   inMemory.createMetricSourceConfig({
     id: "source-config-azure-devops",
@@ -462,10 +565,11 @@ function enableAzureConfig() {
     settings: JSON.stringify({
       organizationEnv: "AZURE_DEVOPS_ORG",
       projectEnv: "AZURE_DEVOPS_PROJECT",
+      ...(typeof overrides.buildDefinitionId === "number" ? { buildDefinitionId: overrides.buildDefinitionId } : {}),
       categoryMap: {
-        unit: { runTitleIncludes: "unit" },
-        api: { runTitleIncludes: "api" },
-        ui: { runTitleIncludes: "ui" },
+        unit: { runTitleIncludes: categoryMapTitles.unit ?? "unit" },
+        api: { runTitleIncludes: categoryMapTitles.api ?? "api" },
+        ui: { runTitleIncludes: categoryMapTitles.ui ?? "ui" },
       },
     }),
     enabled: 1,

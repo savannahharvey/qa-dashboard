@@ -18,11 +18,14 @@ export async function getTeamDashboard(repository: DashboardRepository, teamId: 
     return null;
   }
 
+  const azureOnly = await isAzureOnlyTeam(repository, teamId);
   const [testSuites, qaMetrics, goals] = await Promise.all([
     repository.findTestSuitesByTeam(teamId),
     repository.findMetricsByTeam(teamId),
     repository.findGoalsByTeam(teamId),
   ]);
+  const filteredMetrics = filterMetricsForMode(qaMetrics, azureOnly);
+  const filteredSuites = azureOnly ? [] : testSuites;
 
   return {
     team: {
@@ -30,25 +33,27 @@ export async function getTeamDashboard(repository: DashboardRepository, teamId: 
       name: team.name,
       joinCode: team.joinCode,
     },
-    testSuites: testSuites.map((suite) => ({
+    testSuites: filteredSuites.map((suite) => ({
       id: suite.id,
       category: formatTestCategory(suite.category),
       name: suite.name,
       source: formatMetricSource(suite.source),
       enabled: toBoolean(suite.enabled),
     })),
-    metrics: qaMetrics.map(formatQaMetric),
-    goals: formatGoalsWithMetrics(goals, qaMetrics),
+    metrics: filteredMetrics.map(formatQaMetric),
+    goals: formatGoalsWithMetrics(goals, filteredMetrics),
   };
 }
 
 export async function getTeamMetrics(repository: DashboardRepository, teamId: string) {
-  return (await repository.findMetricsByTeam(teamId)).map(formatQaMetric);
+  const azureOnly = await isAzureOnlyTeam(repository, teamId);
+  return filterMetricsForMode(await repository.findMetricsByTeam(teamId), azureOnly).map(formatQaMetric);
 }
 
 export async function getTeamGoals(repository: DashboardRepository, teamId: string) {
+  const azureOnly = await isAzureOnlyTeam(repository, teamId);
   const [goals, metrics] = await Promise.all([repository.findGoalsByTeam(teamId), repository.findMetricsByTeam(teamId)]);
-  return formatGoalsWithMetrics(goals, metrics);
+  return formatGoalsWithMetrics(goals, filterMetricsForMode(metrics, azureOnly));
 }
 
 function formatGoalsWithMetrics(goals: GoalWithOwner[], metrics: QaMetric[]) {
@@ -79,6 +84,19 @@ function formatGoalsWithMetrics(goals: GoalWithOwner[], metrics: QaMetric[]) {
       updatedAt: goal.updatedAt,
     };
   });
+}
+
+async function isAzureOnlyTeam(repository: DashboardRepository, teamId: string) {
+  const config = await repository.findMetricSourceConfig(teamId, "AZURE_DEVOPS");
+  return Boolean(config && (config.enabled === 1 || config.enabled === true));
+}
+
+function filterMetricsForMode(metrics: QaMetric[], azureOnly: boolean) {
+  if (!azureOnly) {
+    return metrics;
+  }
+
+  return metrics.filter((metric) => metric.source === "AZURE_DEVOPS");
 }
 
 function formatQaMetric(metric: QaMetric) {

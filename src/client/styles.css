@@ -446,6 +446,95 @@ textarea:focus {
   gap: 1rem;
 }
 
+.stacked-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.stacked-form label {
+  color: #2f3b38;
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+}
+
+.stacked-form input[type="text"],
+.stacked-form input:not([type]),
+.stacked-form select {
+  border: 1px solid #c7d6d2;
+  border-radius: 8px;
+  padding: 0.8rem 0.9rem;
+}
+
+.inline-toggle {
+  align-items: center;
+  display: flex;
+  gap: 0.7rem;
+}
+
+/* Styled toggle for inline-toggle checkboxes (Azure connection switch) */
+.inline-toggle input[type="checkbox"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  display: inline-block;
+  vertical-align: middle;
+  width: 44px;
+  height: 24px;
+  background: #cfdedd;
+  border-radius: 999px;
+  position: relative;
+  cursor: pointer;
+  border: 1px solid #c7d6d2;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.inline-toggle input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  transition: transform 160ms ease;
+  transform: translateX(0);
+}
+.inline-toggle input[type="checkbox"]:checked {
+  background: #115c67;
+  border-color: #115c67;
+}
+.inline-toggle input[type="checkbox"]:checked::after {
+  transform: translateX(20px);
+}
+
+.azure-config-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Emphasize goal numbers for better readability */
+.goal-values strong {
+  font-weight: 900;
+  font-size: 1.05rem;
+  color: #172026;
+  margin-right: 0.25rem;
+}
+
+.azure-pipeline-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.azure-pipeline-message {
+  margin-top: -0.35rem;
+}
+
 .goal-list {
   display: grid;
   gap: 1rem;

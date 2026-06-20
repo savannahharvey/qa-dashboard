@@ -72,6 +72,47 @@ export function getDashboard(teamId: string) {
   return requestJson<Dashboard>(`/api/teams/${teamId}/dashboard`);
 }
 
+export function getTeamMetrics(teamId: string) {
+  return requestJson<{ metrics: Dashboard["metrics"] }>(`/api/teams/${teamId}/metrics`);
+}
+
+export type AzureMetricSourceConfig = {
+  source: "AZURE_DEVOPS";
+  enabled: boolean;
+  settings: {
+    organization?: string;
+    project?: string;
+    buildDefinitionId?: number;
+    categoryMap?: Partial<Record<"unit" | "api" | "ui", { runTitleIncludes?: string }>>;
+  };
+};
+
+export type AzurePipelineDefinition = {
+  id: number;
+  name: string;
+  path?: string;
+};
+
+export function getMetricSourceConfig(teamId: string) {
+  return requestJson<{ config: AzureMetricSourceConfig | null }>(`/api/teams/${teamId}/metrics/config`);
+}
+
+export function saveMetricSourceConfig(
+  teamId: string,
+  config: AzureMetricSourceConfig,
+) {
+  return requestJson<{ ok: true }>(`/api/teams/${teamId}/metrics/config`, {
+    method: "POST",
+    body: JSON.stringify(config),
+  });
+}
+
+export function getAzurePipelines(teamId: string) {
+  return requestJson<{ pipelines: AzurePipelineDefinition[]; diagnostics: Array<{ source: string; message: string }> }>(
+    `/api/teams/${teamId}/metrics/azure/pipelines`,
+  );
+}
+
 export function createGoal(teamId: string, goal: GoalInput) {
   return requestJson<{ goal: Goal }>(`/api/teams/${teamId}/goals`, {
     method: "POST",
