@@ -378,6 +378,60 @@ textarea:focus {
   margin: 0.35rem 0 0.5rem;
 }
 
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+@media print {
+  body,
+  .app-shell,
+  .sidebar,
+  .topbar,
+  .page-header,
+  .header-actions,
+  .button,
+  .metric-card,
+  .metrics-grid,
+  .eyebrow,
+  .muted {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .sidebar,
+  .topbar,
+  .button.secondary,
+  .button {
+    display: none !important;
+  }
+
+  .app-shell {
+    display: block !important;
+  }
+
+  .shell-main {
+    padding: 0 !important;
+  }
+
+  .page {
+    padding: 0 !important;
+  }
+
+  .metric-card,
+  .metrics-grid {
+    border: 1px solid #000 !important;
+    page-break-inside: avoid;
+  }
+}
+
 .metrics-grid {
   display: grid;
   gap: 1rem;

@@ -53,6 +53,10 @@ export function TestResultsPage() {
     [metrics],
   );
 
+  function handlePrint() {
+    window.print();
+  }
+
   return (
     <AppShell>
       <main className="page">
@@ -62,6 +66,13 @@ export function TestResultsPage() {
             <h1>Live Azure test results</h1>
             <p className="muted">This page now reflects the team’s connected Azure DevOps pipeline, not seeded mock data.</p>
           </div>
+          {primaryTeam && !loading ? (
+            <div className="header-actions">
+              <button className="button secondary" type="button" onClick={handlePrint}>
+                Print / save PDF
+              </button>
+            </div>
+          ) : null}
         </section>
 
         {loading ? <p className="muted">Loading Azure metrics...</p> : null}
