@@ -534,7 +534,8 @@ textarea:focus {
   display: inline-block;
   vertical-align: middle;
   width: 44px;
-  height: 24px;
+  height: 25px;
+  min-height: 0;
   background: #cfdedd;
   border-radius: 999px;
   position: relative;
