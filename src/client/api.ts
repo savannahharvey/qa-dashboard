@@ -61,6 +61,13 @@ export function signOut() {
   return requestJson<void>("/api/auth/sign-out", { method: "POST" });
 }
 
+export function createTeam(teamName: string) {
+  return requestJson<{ team: Team }>('/api/teams/create', {
+    method: 'POST',
+    body: JSON.stringify({ teamName }),
+  });
+}
+
 export function joinTeam(joinCode: string) {
   return requestJson<{ team: Team }>("/api/teams/join", {
     method: "POST",

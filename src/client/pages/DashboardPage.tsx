@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ApiError,
+  createTeam,
   getAzurePipelines,
   getDashboard,
   getMetricSourceConfig,
@@ -40,8 +41,9 @@ const defaultAzureDraft = (): AzureConfigDraft => ({
   },
 });
 
-export function DashboardPage() {
+export function DashboardPage({ mode = "dashboard" }: { mode?: "dashboard" | "setup" }) {
   const { primaryTeam, reloadSession } = useAuth();
+  const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -102,11 +104,20 @@ export function DashboardPage() {
     setRefreshToken((value) => value + 1);
   }
 
+  const shouldShowSetup = mode === "setup" || !primaryTeam;
+
   return (
     <AppShell>
       <main className="dashboard-page">
-        {!primaryTeam ? <JoinTeamPanel onJoined={reloadSession} /> : null}
-        {primaryTeam ? (
+        {shouldShowSetup ? (
+          <TeamSetupPanel
+            onCompleted={async () => {
+              await reloadSession();
+              navigate("/dashboard", { replace: true });
+            }}
+          />
+        ) : null}
+        {primaryTeam && !shouldShowSetup ? (
           <>
             <DashboardHeader dashboard={dashboard} onRefresh={handleRefreshDashboard} />
             <AzureDevOpsConfigPanel teamId={primaryTeam.id} onSaved={handleAzureConfigSaved} />
@@ -146,6 +157,9 @@ function DashboardHeader({ dashboard, onRefresh }: { dashboard: Dashboard | null
       </div>
       <div className="header-actions">
         {refreshMessage ? <span className="muted">{refreshMessage}</span> : null}
+        <Link className="button secondary" to="/dashboard/setup">
+          Switch team
+        </Link>
         <button className="button secondary" type="button" onClick={handleRefresh} disabled={refreshing}>
           {refreshing ? "Refreshing..." : "Refresh metrics"}
         </button>
@@ -510,41 +524,85 @@ function TeamBoard({ dashboard }: { dashboard: Dashboard }) {
   );
 }
 
-function JoinTeamPanel({ onJoined }: { onJoined: () => Promise<void> }) {
-  const [joinCode, setJoinCode] = useState("QA-232");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+function TeamSetupPanel({ onCompleted }: { onCompleted: () => Promise<void> }) {
+  const [teamName, setTeamName] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [createError, setCreateError] = useState("");
+  const [joinError, setJoinError] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateTeam(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitting(true);
-    setError("");
+    setCreateError("");
+    const trimmedName = teamName.trim();
 
+    if (!trimmedName) {
+      setCreateError("Team name is required.");
+      return;
+    }
+
+    setCreating(true);
     try {
-      await joinTeam(joinCode);
-      await onJoined();
+      await createTeam(trimmedName);
+      await onCompleted();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not join team.");
+      setCreateError(err instanceof ApiError ? err.message : "Could not create team.");
     } finally {
-      setSubmitting(false);
+      setCreating(false);
+    }
+  }
+
+  async function handleJoinTeam(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setJoinError("");
+    const trimmedCode = joinCode.trim();
+
+    if (!trimmedCode) {
+      setJoinError("Join code is required.");
+      return;
+    }
+
+    setJoining(true);
+    try {
+      await joinTeam(trimmedCode);
+      await onCompleted();
+    } catch (err) {
+      setJoinError(err instanceof ApiError ? err.message : "Could not join team.");
+    } finally {
+      setJoining(false);
     }
   }
 
   return (
     <section className="join-panel">
       <span className="eyebrow">Team access</span>
-      <h1>Join a team</h1>
-      <p className="muted">Enter your class team code to open the dashboard.</p>
-      <form className="inline-form" onSubmit={handleSubmit}>
-        <label>
-          Join code
-          <input value={joinCode} onChange={(event) => setJoinCode(event.target.value)} />
-        </label>
-        <button className="button" type="submit" disabled={submitting}>
-          {submitting ? "Joining..." : "Join team"}
-        </button>
-      </form>
-      {error ? <p className="form-error">{error}</p> : null}
+      <h1>Create or join a team</h1>
+      <p className="muted">Start a new team or use an existing join code to open the dashboard.</p>
+
+      <div className="stacked-form">
+        <form className="inline-form" onSubmit={handleCreateTeam}>
+          <label>
+            Team name
+            <input value={teamName} onChange={(event) => setTeamName(event.target.value)} />
+          </label>
+          <button className="button" type="submit" disabled={creating}>
+            {creating ? "Creating..." : "Create team"}
+          </button>
+        </form>
+        {createError ? <p className="form-error">{createError}</p> : null}
+
+        <form className="inline-form" onSubmit={handleJoinTeam}>
+          <label>
+            Join code
+            <input value={joinCode} onChange={(event) => setJoinCode(event.target.value)} />
+          </label>
+          <button className="button secondary" type="submit" disabled={joining}>
+            {joining ? "Joining..." : "Join team"}
+          </button>
+        </form>
+        {joinError ? <p className="form-error">{joinError}</p> : null}
+      </div>
     </section>
   );
 }

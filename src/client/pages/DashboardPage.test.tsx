@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 
 import { MemoryRouter } from "react-router-dom";
+import * as reactRouterDom from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ApiError,
+  createTeam,
   getAzurePipelines,
   getDashboard,
   getMetricSourceConfig,
@@ -24,6 +26,7 @@ vi.mock("../api", async () => {
   const actual = await vi.importActual<typeof import("../api")>("../api");
   return {
     ...actual,
+    createTeam: vi.fn(),
     getAzurePipelines: vi.fn(),
     getDashboard: vi.fn(),
     getMetricSourceConfig: vi.fn(),
@@ -36,12 +39,23 @@ vi.mock("../api", async () => {
 import { useAuth } from "../state/AuthContext";
 
 const useAuthMock = vi.mocked(useAuth);
+let navigateMock: ReturnType<typeof vi.fn>;
+const navigateSpy = vi.spyOn(reactRouterDom, "useNavigate");
 
 vi.mocked(getMetricSourceConfig).mockResolvedValue({ config: null });
 vi.mocked(getAzurePipelines).mockResolvedValue({ pipelines: [], diagnostics: [] });
 vi.mocked(saveMetricSourceConfig).mockResolvedValue({ ok: true });
 
+afterEach(() => {
+  vi.clearAllMocks();
+  navigateMock = vi.fn();
+  navigateSpy.mockImplementation(() => navigateMock as never);
+});
+
 describe("DashboardPage", () => {
+  navigateMock = vi.fn();
+  navigateSpy.mockImplementation(() => navigateMock as never);
+
   it("renders the live dashboard data and a loading state", async () => {
     useAuthMock.mockReturnValue(authWithTeam());
     vi.mocked(getDashboard).mockResolvedValueOnce(dashboardFixture());
@@ -115,6 +129,26 @@ describe("DashboardPage", () => {
     }
   });
 
+  it("creates a team and reloads the authenticated session", async () => {
+    const user = userEvent.setup();
+    const reloadSession = vi.fn();
+    useAuthMock.mockReturnValue(authWithoutTeam({ reloadSession }));
+    vi.mocked(createTeam).mockResolvedValueOnce({ team: { id: "team-qa", name: "QA Dashboard Team" } });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText("Team name"), "QA Dashboard Team");
+    await user.click(screen.getByRole("button", { name: "Create team" }));
+
+    expect(createTeam).toHaveBeenCalledWith("QA Dashboard Team");
+    expect(reloadSession).toHaveBeenCalledTimes(1);
+    expect(navigateMock).toHaveBeenCalledWith("/dashboard", { replace: true });
+  });
+
   it("joins a team and reloads the authenticated session", async () => {
     const user = userEvent.setup();
     const reloadSession = vi.fn();
@@ -127,10 +161,24 @@ describe("DashboardPage", () => {
       </MemoryRouter>,
     );
 
+    await user.type(screen.getByLabelText("Join code"), "QA-232");
     await user.click(screen.getByRole("button", { name: "Join team" }));
 
     expect(joinTeam).toHaveBeenCalledWith("QA-232");
     expect(reloadSession).toHaveBeenCalledTimes(1);
+    expect(navigateMock).toHaveBeenCalledWith("/dashboard", { replace: true });
+  });
+
+  it("shows the setup flow when opened directly on the setup route", async () => {
+    useAuthMock.mockReturnValue(authWithoutTeam());
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard/setup"]}>
+        <DashboardPage mode="setup" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Create or join a team" })).toBeInTheDocument();
   });
 });
 

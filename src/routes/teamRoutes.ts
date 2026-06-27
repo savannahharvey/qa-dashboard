@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import { repository } from "../db/index.js";
 import { toBoolean } from "../db/repository.js";
@@ -8,6 +9,31 @@ import { formatGoal, validateAndBuildGoal } from "../services/goalService.js";
 
 export const teamRoutes = Router();
 const protectedTeam = requireTeamMembership(repository);
+
+teamRoutes.post("/create", requireAuth(repository), async (req, res) => {
+  const teamName = typeof req.body?.teamName === "string" ? req.body.teamName.trim() : "";
+
+  if (!teamName) {
+    res.status(400).json({ error: "Validation failed", fields: { teamName: "Team name is required" } });
+    return;
+  }
+
+  const team = {
+    id: `team-${randomUUID()}`,
+    name: teamName,
+    joinCode: generateJoinCode(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  await repository.createTeam(team);
+  await repository.createMembership(req.currentUser!.id, team.id);
+
+  res.json({
+    team: { id: team.id, name: team.name, joinCode: team.joinCode },
+    teams: await repository.findTeamsByUser(req.currentUser!.id),
+  });
+});
 
 teamRoutes.post("/join", requireAuth(repository), async (req, res) => {
   const joinCode = typeof req.body?.joinCode === "string" ? req.body.joinCode.trim() : "";
@@ -24,7 +50,10 @@ teamRoutes.post("/join", requireAuth(repository), async (req, res) => {
   }
 
   await repository.createMembership(req.currentUser!.id, team.id);
-  res.json({ team: { id: team.id, name: team.name } });
+  res.json({
+    team: { id: team.id, name: team.name },
+    teams: await repository.findTeamsByUser(req.currentUser!.id),
+  });
 });
 
 teamRoutes.get("/:teamId/dashboard", async (req, res) => {
@@ -163,4 +192,8 @@ function parseMetricSourceSettings(settings: string) {
   } catch {
     return {};
   }
+}
+
+function generateJoinCode() {
+  return `QA-${randomUUID().slice(0, 6).toUpperCase()}`;
 }

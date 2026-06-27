@@ -24,6 +24,7 @@ export type DashboardRepository = {
   findMembership(userId: string, teamId: string): Promise<{ userId: string; teamId: string } | undefined>;
   findTeamsByUser(userId: string): Promise<PublicTeam[]>;
   createUser(user: User): Promise<void>;
+  createTeam(team: { id: string; name: string; joinCode: string | null; createdAt: string; updatedAt: string }): Promise<void>;
   createMembership(userId: string, teamId: string): Promise<void>;
   createGoal(goal: Goal): Promise<void>;
   findGoal(goalId: string): Promise<Goal | undefined>;
@@ -74,6 +75,13 @@ export function createPostgresRepository(pool: Pool): DashboardRepository {
         `INSERT INTO "User" ("id", "username", "displayName", "passwordHash", "createdAt", "updatedAt")
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [user.id, user.username, user.displayName, user.passwordHash ?? null, user.createdAt, user.updatedAt],
+      );
+    },
+    async createTeam(team) {
+      await pool.query(
+        `INSERT INTO "Team" ("id", "name", "joinCode", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5)`,
+        [team.id, team.name, team.joinCode, team.createdAt, team.updatedAt],
       );
     },
     async createMembership(userId, teamId) {

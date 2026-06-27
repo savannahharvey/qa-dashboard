@@ -37,8 +37,13 @@ function createInMemoryRepository() {
     async createUser(user: any) {
       users.push(user);
     },
+    async createTeam(team: any) {
+      teams.push(team);
+    },
     async createMembership(userId: string, teamId: string) {
-      memberships.push({ userId, teamId });
+      if (!memberships.some((m) => m.userId === userId && m.teamId === teamId)) {
+        memberships.push({ userId, teamId });
+      }
     },
     async createGoal(goal: any) {
       goals.push(goal);
@@ -156,9 +161,22 @@ describe("team membership and protected routes", () => {
     await request(app).post("/api/teams/team-qa/goals").send({}).expect(401);
   });
 
+  it("creates a team and adds the current user as a member", async () => {
+    const agent = request.agent(app);
+    await agent.post("/api/auth/sign-up").send({ username: "alex-creator", password: "password123" }).expect(201);
+
+    const response = await agent.post("/api/teams/create").send({ teamName: "New Team" }).expect(200);
+
+    expect(response.body.team).toMatchObject({ name: "New Team" });
+    expect(response.body.team.joinCode).toEqual(expect.any(String));
+
+    const dashboard = await agent.get(`/api/teams/${response.body.team.id}/dashboard`).expect(200);
+    expect(dashboard.body.team.id).toBe(response.body.team.id);
+  });
+
   it("joins a team by code and treats duplicate joins as success", async () => {
     const agent = request.agent(app);
-    await agent.post("/api/auth/sign-up").send({ username: "alex", password: "password123" }).expect(201);
+    await agent.post("/api/auth/sign-up").send({ username: "alex-joiner", password: "password123" }).expect(201);
 
     await agent.post("/api/teams/join").send({ joinCode: "NOPE" }).expect(404);
     const firstJoin = await agent.post("/api/teams/join").send({ joinCode: "QA-232" }).expect(200);

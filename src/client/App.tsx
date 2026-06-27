@@ -23,6 +23,14 @@ export function App() {
         }
       />
       <Route
+        path="/dashboard/setup"
+        element={
+          <RequireAuth>
+            <DashboardPage mode="setup" />
+          </RequireAuth>
+        }
+      />
+      <Route
         path="/dashboard/test-results"
         element={
           <RequireAuth>
