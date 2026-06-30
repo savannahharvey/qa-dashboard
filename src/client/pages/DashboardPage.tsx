@@ -131,6 +131,30 @@ export function DashboardPage({ mode = "dashboard" }: { mode?: "dashboard" | "se
   );
 }
 
+function JoinCodeDisplay({ joinCode }: { joinCode: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(joinCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard unavailable; code is still visible and selectable
+    }
+  }
+
+  return (
+    <span className="join-code-display">
+      <span className="muted">Join code:</span>{" "}
+      <code>{joinCode}</code>
+      <button className="button secondary button-sm" type="button" onClick={handleCopy}>
+        {copied ? "Copied!" : "Copy"}
+      </button>
+    </span>
+  );
+}
+
 function DashboardHeader({ dashboard, onRefresh }: { dashboard: Dashboard | null; onRefresh: () => Promise<unknown> }) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState("");
@@ -153,6 +177,7 @@ function DashboardHeader({ dashboard, onRefresh }: { dashboard: Dashboard | null
       <div>
         <span className="eyebrow">Protected dashboard</span>
         <h1>{dashboard?.team.name ?? "Team board"}</h1>
+        {dashboard?.team.joinCode ? <JoinCodeDisplay joinCode={dashboard.team.joinCode} /> : null}
         <p className="muted">Goal progress, owner focus, and QA signals for the current team.</p>
       </div>
       <div className="header-actions">
@@ -527,6 +552,7 @@ function TeamBoard({ dashboard }: { dashboard: Dashboard }) {
 function TeamSetupPanel({ onCompleted }: { onCompleted: () => Promise<void> }) {
   const [teamName, setTeamName] = useState("");
   const [joinCode, setJoinCode] = useState("");
+  const [newTeamJoinCode, setNewTeamJoinCode] = useState<string | null>(null);
   const [createError, setCreateError] = useState("");
   const [joinError, setJoinError] = useState("");
   const [creating, setCreating] = useState(false);
@@ -544,8 +570,12 @@ function TeamSetupPanel({ onCompleted }: { onCompleted: () => Promise<void> }) {
 
     setCreating(true);
     try {
-      await createTeam(trimmedName);
-      await onCompleted();
+      const result = await createTeam(trimmedName);
+      if (result.team.joinCode) {
+        setNewTeamJoinCode(result.team.joinCode);
+      } else {
+        await onCompleted();
+      }
     } catch (err) {
       setCreateError(err instanceof ApiError ? err.message : "Could not create team.");
     } finally {
@@ -572,6 +602,22 @@ function TeamSetupPanel({ onCompleted }: { onCompleted: () => Promise<void> }) {
     } finally {
       setJoining(false);
     }
+  }
+
+  if (newTeamJoinCode) {
+    return (
+      <section className="join-panel">
+        <span className="eyebrow">Team created</span>
+        <h1>Your team is ready</h1>
+        <p className="muted">Share this join code with your teammates so they can join your team.</p>
+        <JoinCodeDisplay joinCode={newTeamJoinCode} />
+        <div className="header-actions" style={{ marginTop: "1rem" }}>
+          <button className="button" type="button" onClick={onCompleted}>
+            Continue to dashboard
+          </button>
+        </div>
+      </section>
+    );
   }
 
   return (
