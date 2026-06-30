@@ -3,7 +3,7 @@ services:
     name: qa-dashboard-api
     runtime: node
     plan: free
-    buildCommand: npm install --include=dev && npm run build:api
+    buildCommand: NODE_ENV=development npm install && npm run build:api
     startCommand: node dist/server.js
     envVars:
       - key: NODE_ENV
