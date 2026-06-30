@@ -1,5 +1,7 @@
 import type { Dashboard, Goal, GoalInput, Team, User } from "./types";
 
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+
 type ApiErrorBody = {
   error?: string;
   fields?: Record<string, string>;
@@ -17,7 +19,7 @@ export class ApiError extends Error {
 }
 
 async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     credentials: "include",
     headers: {

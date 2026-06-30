@@ -52,10 +52,11 @@ export function publicUser(user: User): PublicUser {
 export function startSession(res: Response, userId: string) {
   const sessionId = randomUUID();
   sessions.set(sessionId, { userId, expiresAt: Date.now() + sessionTtlMs });
+  const isProduction = process.env.NODE_ENV === "production";
   res.cookie(sessionCookieName, sessionId, {
     httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
     path: "/",
     maxAge: sessionTtlMs,
   });
@@ -69,7 +70,7 @@ export function clearSession(req: Request, res: Response) {
 
   res.clearCookie(sessionCookieName, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
   });

@@ -13,9 +13,8 @@ try {
   console.error(`Database error: ${message}`);
   console.error("");
   console.error("Check that:");
-  console.error("- the local SSM tunnel to the RDS instance is running");
-  console.error("- DATABASE_URL uses the current username and password from Terraform or Secrets Manager");
-  console.error("- the local tunnel URL does not force SSL if the forwarded connection rejects it");
+  console.error("- DATABASE_URL is set correctly in your environment");
+  console.error("- the Neon project is active and the connection string is up to date");
   await closeDatabase();
   process.exit(1);
 }
