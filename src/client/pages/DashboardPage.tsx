@@ -287,6 +287,21 @@ function AzureDevOpsConfigPanel({ teamId, onSaved }: { teamId: string; onSaved: 
     setPipelinesMessage("");
 
     try {
+      const buildDefinitionId = draft.buildDefinitionId.trim() ? Number(draft.buildDefinitionId) : undefined;
+      await saveMetricSourceConfig(teamId, {
+        source: "AZURE_DEVOPS",
+        enabled: draft.enabled,
+        settings: {
+          organization: draft.organization.trim(),
+          project: draft.project.trim(),
+          ...(Number.isFinite(buildDefinitionId) ? { buildDefinitionId } : {}),
+          categoryMap: {
+            unit: { runTitleIncludes: draft.categoryMap.unit.trim() || "unit" },
+            api: { runTitleIncludes: draft.categoryMap.api.trim() || "api" },
+            ui: { runTitleIncludes: draft.categoryMap.ui.trim() || "ui" },
+          },
+        },
+      });
       const pipelinesResponse = await getAzurePipelines(teamId);
       setPipelines(pipelinesResponse.pipelines);
       setPipelinesMessage(
