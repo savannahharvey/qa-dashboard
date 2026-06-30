@@ -27,6 +27,7 @@ export type DashboardRepository = {
   createTeam(team: { id: string; name: string; joinCode: string | null; createdAt: string; updatedAt: string }): Promise<void>;
   createMembership(userId: string, teamId: string): Promise<void>;
   createGoal(goal: Goal): Promise<void>;
+  updateGoal(goalId: string, teamId: string, fields: Partial<Goal>): Promise<Goal | undefined>;
   findGoal(goalId: string): Promise<Goal | undefined>;
   findMetricSourceConfig(teamId: string, source: MetricSource): Promise<MetricSourceConfig | undefined>;
   upsertMetricSourceConfig(teamId: string, source: MetricSource, settings: string, enabled: number | boolean): Promise<void>;
@@ -118,6 +119,34 @@ export function createPostgresRepository(pool: Pool): DashboardRepository {
           goal.updatedAt,
         ],
       );
+    },
+    async updateGoal(goalId, teamId, fields) {
+      const now = new Date().toISOString();
+      const result = await pool.query(
+        `UPDATE "Goal"
+         SET "ownerId" = $3, "scope" = $4, "parentGoalId" = $5, "title" = $6, "description" = $7,
+             "metricType" = $8, "testCategory" = $9, "currentValue" = $10, "targetValue" = $11,
+             "unit" = $12, "dueDate" = $13, "updatedAt" = $14
+         WHERE "id" = $1 AND "teamId" = $2
+         RETURNING *`,
+        [
+          goalId,
+          teamId,
+          fields.ownerId,
+          fields.scope,
+          fields.parentGoalId ?? null,
+          fields.title,
+          fields.description ?? null,
+          fields.metricType ?? null,
+          fields.testCategory ?? null,
+          fields.currentValue,
+          fields.targetValue,
+          fields.unit ?? null,
+          fields.dueDate ?? null,
+          now,
+        ],
+      );
+      return one<Goal>(result);
     },
     async findGoal(goalId) {
       return one<Goal>(await pool.query(`SELECT * FROM "Goal" WHERE "id" = $1`, [goalId]));

@@ -88,6 +88,31 @@ teamRoutes.post("/:teamId/goals", protectedTeam, async (req, res) => {
   res.status(201).json({ goal: formatGoal(result.goal) });
 });
 
+teamRoutes.put("/:teamId/goals/:goalId", protectedTeam, async (req, res) => {
+  const teamId = String(req.params.teamId);
+  const goalId = String(req.params.goalId);
+
+  const existing = await repository.findGoal(goalId);
+  if (!existing || existing.teamId !== teamId) {
+    res.status(404).json({ error: "Goal not found" });
+    return;
+  }
+
+  const result = await validateAndBuildGoal(repository, teamId, req.body);
+  if (!result.ok) {
+    res.status(result.status).json(result.body);
+    return;
+  }
+
+  const updated = await repository.updateGoal(goalId, teamId, result.goal);
+  if (!updated) {
+    res.status(404).json({ error: "Goal not found" });
+    return;
+  }
+
+  res.json({ goal: formatGoal(updated) });
+});
+
 teamRoutes.post("/:teamId/metrics/refresh", protectedTeam, async (req, res, next) => {
   try {
     const teamId = String(req.params.teamId);

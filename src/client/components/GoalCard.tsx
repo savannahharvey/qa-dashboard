@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { categoryLabels, metricLabels, progressPercent, statusClass, statusLabels } from "../domain/display";
 import type { Goal } from "../types";
 
@@ -11,7 +12,10 @@ export function GoalCard({ goal, compact = false }: { goal: Goal; compact?: bool
           <span className="eyebrow">{goal.scope === "team" ? "Team goal" : "Individual goal"}</span>
           <h3>{goal.title}</h3>
         </div>
-        <span className={statusClass(goal.status)}>{statusLabels[goal.status]}</span>
+          <span className={statusClass(goal.status)}>{statusLabels[goal.status]}</span>
+        <Link className="button secondary small" to={`/dashboard/goals/${goal.id}/edit`}>
+          Edit
+        </Link>
       </div>
       {goal.description ? <p>{goal.description}</p> : null}
       <div className="goal-meta">

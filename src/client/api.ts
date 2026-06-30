@@ -129,6 +129,13 @@ export function createGoal(teamId: string, goal: GoalInput) {
   });
 }
 
+export function updateGoal(teamId: string, goalId: string, goal: GoalInput) {
+  return requestJson<{ goal: Goal }>(`/api/teams/${teamId}/goals/${goalId}`, {
+    method: "PUT",
+    body: JSON.stringify(goal),
+  });
+}
+
 export function refreshMetrics(teamId: string) {
   return requestJson(`/api/teams/${teamId}/metrics/refresh`, {
     method: "POST",

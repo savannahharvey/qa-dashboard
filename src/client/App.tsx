@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import type { ReactNode } from "react";
 import { CreateGoalPage } from "./pages/CreateGoalPage";
+import { EditGoalPage } from "./pages/EditGoalPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { TestResultsPage } from "./pages/TestResultsPage";
 import { HomePage } from "./pages/HomePage";
@@ -43,6 +44,14 @@ export function App() {
         element={
           <RequireAuth>
             <CreateGoalPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/dashboard/goals/:goalId/edit"
+        element={
+          <RequireAuth>
+            <EditGoalPage />
           </RequireAuth>
         }
       />
