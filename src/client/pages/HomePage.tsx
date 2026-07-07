@@ -1,5 +1,7 @@
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../state/AuthContext";
+import { Sparkline } from "../components/charts/Sparkline";
+import { sampleLandingStats } from "../domain/sampleInsights";
 
 export function HomePage() {
   const { status } = useAuth();
@@ -12,7 +14,7 @@ export function HomePage() {
     <main className="public-page">
       <nav className="public-nav" aria-label="Public navigation">
         <Link className="brand" to="/">
-          <span className="brand-mark">QA</span>
+          <span className="brand-mark mono">QA</span>
           <strong>QA Dashboard</strong>
         </Link>
         <div>
@@ -27,11 +29,11 @@ export function HomePage() {
 
       <section className="hero">
         <div className="hero-copy">
-          <span className="eyebrow">Goals, ownership, and quality signals</span>
-          <h1>QA Dashboard</h1>
+          <span className="eyebrow">Goals · Ownership · Quality signals</span>
+          <h1>Every test signal, next to the goal it supports.</h1>
           <p>
-            Track team goals, individual ownership, progress, and QA metrics in one focused place so the next team
-            conversation starts from shared evidence.
+            Track team goals, individual ownership, and QA coverage in one focused place — so the next conversation
+            starts from shared evidence, not scattered spreadsheets.
           </p>
           <div className="hero-actions">
             <Link className="button" to="/sign-up">
@@ -44,29 +46,24 @@ export function HomePage() {
         </div>
         <div className="dashboard-preview" aria-label="Dashboard preview">
           <div className="preview-header">
-            <span />
-            <span />
-            <span />
+            <span>Suite health</span>
+            <span>▲ live</span>
           </div>
           <div className="preview-grid">
             <div>
-              <strong>Unit coverage</strong>
-              <b>82%</b>
+              <strong>Pass rate</strong>
+              <b>{sampleLandingStats.passRate}%</b>
             </div>
             <div>
-              <strong>API tests</strong>
-              <b>Passing</b>
+              <strong>Avg coverage</strong>
+              <b>{sampleLandingStats.avgCoverage}%</b>
             </div>
             <div>
-              <strong>UI coverage</strong>
-              <b>61%</b>
+              <strong>At risk</strong>
+              <b>{sampleLandingStats.atRisk}</b>
             </div>
           </div>
-          <div className="preview-list">
-            <span />
-            <span />
-            <span />
-          </div>
+          <Sparkline data={sampleLandingStats.trend} width={320} height={90} color="#5fbf9f" />
         </div>
       </section>
     </main>

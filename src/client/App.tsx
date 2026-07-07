@@ -4,6 +4,8 @@ import { CreateGoalPage } from "./pages/CreateGoalPage";
 import { EditGoalPage } from "./pages/EditGoalPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { TestResultsPage } from "./pages/TestResultsPage";
+import { InsightsPage } from "./pages/InsightsPage";
+import { IntegrationsPage } from "./pages/IntegrationsPage";
 import { HomePage } from "./pages/HomePage";
 import { SignInPage } from "./pages/SignInPage";
 import { SignUpPage } from "./pages/SignUpPage";
@@ -36,6 +38,22 @@ export function App() {
         element={
           <RequireAuth>
             <TestResultsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/dashboard/insights"
+        element={
+          <RequireAuth>
+            <InsightsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/dashboard/integrations"
+        element={
+          <RequireAuth>
+            <IntegrationsPage />
           </RequireAuth>
         }
       />

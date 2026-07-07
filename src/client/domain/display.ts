@@ -1,4 +1,4 @@
-import type { Goal, GoalStatus, MetricKind, MetricStatus, QaMetric, TestCategory } from "../types";
+import type { Dashboard, Goal, GoalStatus, MetricKind, MetricStatus, QaMetric, TestCategory } from "../types";
 
 export const categoryLabels: Record<TestCategory, string> = {
   unit: "Unit",
@@ -46,6 +46,32 @@ export function progressPercent(goal: Goal) {
   }
 
   return Math.max(0, Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100)));
+}
+
+export function deriveKpis(dashboard: Dashboard) {
+  const passingMetrics = dashboard.metrics.filter((metric) => metric.kind === "tests-passing");
+  const passRate = passingMetrics.length
+    ? Math.round((passingMetrics.filter((metric) => metric.status === "passing").length / passingMetrics.length) * 100)
+    : null;
+
+  const coverageMetrics = dashboard.metrics.filter((metric) => metric.kind === "test-coverage" && typeof metric.value === "number");
+  const avgCoverage = coverageMetrics.length
+    ? Math.round(coverageMetrics.reduce((sum, metric) => sum + (metric.value ?? 0), 0) / coverageMetrics.length)
+    : null;
+
+  const atRisk = dashboard.goals.filter((goal) => goal.status === "at-risk").length;
+  const active = dashboard.goals.filter((goal) => goal.status === "active").length;
+  const completed = dashboard.goals.filter((goal) => goal.status === "completed").length;
+
+  return {
+    passRate,
+    avgCoverage,
+    atRisk,
+    active,
+    completed,
+    onTrack: active + completed,
+    totalGoals: dashboard.goals.length,
+  };
 }
 
 export function groupGoals(goals: Goal[]) {

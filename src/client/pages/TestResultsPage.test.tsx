@@ -52,9 +52,9 @@ describe("TestResultsPage", () => {
     );
 
     expect(screen.getByText("Loading Azure metrics...")).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: /Print \/ save PDF/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Print \/ PDF/i })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /Print \/ save PDF/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Print \/ PDF/i }));
 
     await waitFor(() => {
       expect(printSpy).toHaveBeenCalledTimes(1);

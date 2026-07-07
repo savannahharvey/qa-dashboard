@@ -1,22 +1,14 @@
 // @vitest-environment jsdom
 
 import { MemoryRouter } from "react-router-dom";
-import * as reactRouterDom from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  ApiError,
-  createTeam,
-  getAzurePipelines,
-  getDashboard,
-  getMetricSourceConfig,
-  joinTeam,
-  refreshMetrics,
-  saveMetricSourceConfig,
-} from "../api";
+import { ApiError, createTeam, getDashboard, getTestsOverTime, joinTeam, refreshMetrics } from "../api";
 import { DashboardPage } from "./DashboardPage";
 import type { Dashboard, Goal, Team } from "../types";
+
+const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }));
 
 vi.mock("../state/AuthContext", () => ({
   useAuth: vi.fn(),
@@ -27,34 +19,29 @@ vi.mock("../api", async () => {
   return {
     ...actual,
     createTeam: vi.fn(),
-    getAzurePipelines: vi.fn(),
     getDashboard: vi.fn(),
-    getMetricSourceConfig: vi.fn(),
+    getTestsOverTime: vi.fn(),
     joinTeam: vi.fn(),
     refreshMetrics: vi.fn(),
-    saveMetricSourceConfig: vi.fn(),
   };
+});
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return { ...actual, useNavigate: () => navigateMock };
 });
 
 import { useAuth } from "../state/AuthContext";
 
 const useAuthMock = vi.mocked(useAuth);
-let navigateMock: ReturnType<typeof vi.fn>;
-const navigateSpy = vi.spyOn(reactRouterDom, "useNavigate");
 
-vi.mocked(getMetricSourceConfig).mockResolvedValue({ config: null });
-vi.mocked(getAzurePipelines).mockResolvedValue({ pipelines: [], diagnostics: [] });
-vi.mocked(saveMetricSourceConfig).mockResolvedValue({ ok: true });
+vi.mocked(getTestsOverTime).mockResolvedValue({ data: [], meta: {} });
 
 afterEach(() => {
   vi.clearAllMocks();
-  navigateMock = vi.fn();
-  navigateSpy.mockImplementation(() => navigateMock as never);
 });
 
 describe("DashboardPage", () => {
-  navigateMock = vi.fn();
-  navigateSpy.mockImplementation(() => navigateMock as never);
 
   it("renders the live dashboard data and a loading state", async () => {
     useAuthMock.mockReturnValue(authWithTeam());
@@ -101,7 +88,7 @@ describe("DashboardPage", () => {
 
     expect(await screen.findByText("74%")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Refresh metrics" }));
+    await user.click(screen.getByRole("button", { name: "Refresh" }));
 
     expect(refreshMetrics).toHaveBeenCalledWith("team-qa");
     expect(await screen.findByText("91%")).toBeInTheDocument();

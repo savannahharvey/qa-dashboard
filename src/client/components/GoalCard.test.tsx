@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { MemoryRouter } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { GoalCard } from "./GoalCard";
@@ -7,7 +8,11 @@ import type { Goal } from "../types";
 
 describe("GoalCard", () => {
   it("renders owner, status, metric, and capped progress", () => {
-    render(<GoalCard goal={goal()} />);
+    render(
+      <MemoryRouter>
+        <GoalCard goal={goal()} />
+      </MemoryRouter>,
+    );
 
     expect(screen.getByRole("heading", { name: "Keep API tests passing" })).toBeInTheDocument();
     expect(screen.getByText("Fixture Jordan")).toBeInTheDocument();

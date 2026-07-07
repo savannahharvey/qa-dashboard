@@ -1,45 +1,16 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  ApiError,
-  createTeam,
-  getAzurePipelines,
-  getDashboard,
-  getMetricSourceConfig,
-  joinTeam,
-  refreshMetrics,
-  saveMetricSourceConfig,
-  type AzurePipelineDefinition,
-} from "../api";
+import { ApiError, createTeam, getDashboard, getTestsOverTime, joinTeam, refreshMetrics, type TestsOverTimeRow } from "../api";
 import { AppShell } from "../components/AppShell";
 import { GoalCard } from "../components/GoalCard";
-import { categoryLabels, formatMetricValue, groupGoals, metricLabels, statusClass } from "../domain/display";
+import { CategoryMetricsRow, type CategoryCardData } from "../components/CategoryMetricsRow";
+import { AreaChart } from "../components/charts/AreaChart";
+import { LineChart } from "../components/charts/LineChart";
+import { Sparkline } from "../components/charts/Sparkline";
+import { deriveKpis, groupGoals } from "../domain/display";
+import { sampleCategorySparklines, sampleCoverageTrend, sampleCoverageTrendLabels } from "../domain/sampleInsights";
 import { useAuth } from "../state/AuthContext";
 import type { Dashboard } from "../types";
-
-type AzureConfigDraft = {
-  enabled: boolean;
-  organization: string;
-  project: string;
-  buildDefinitionId: string;
-  categoryMap: {
-    unit: string;
-    api: string;
-    ui: string;
-  };
-};
-
-const defaultAzureDraft = (): AzureConfigDraft => ({
-  enabled: false,
-  organization: "",
-  project: "",
-  buildDefinitionId: "",
-  categoryMap: {
-    unit: "unit",
-    api: "api",
-    ui: "ui",
-  },
-});
 
 export function DashboardPage({ mode = "dashboard" }: { mode?: "dashboard" | "setup" }) {
   const { primaryTeam, reloadSession } = useAuth();
@@ -98,12 +69,6 @@ export function DashboardPage({ mode = "dashboard" }: { mode?: "dashboard" | "se
     setRefreshToken((value) => value + 1);
   }
 
-  async function handleAzureConfigSaved() {
-    if (!primaryTeam) return;
-    await refreshMetrics(primaryTeam.id);
-    setRefreshToken((value) => value + 1);
-  }
-
   const shouldShowSetup = mode === "setup" || !primaryTeam;
 
   return (
@@ -120,7 +85,6 @@ export function DashboardPage({ mode = "dashboard" }: { mode?: "dashboard" | "se
         {primaryTeam && !shouldShowSetup ? (
           <>
             <DashboardHeader dashboard={dashboard} onRefresh={handleRefreshDashboard} />
-            <AzureDevOpsConfigPanel teamId={primaryTeam.id} onSaved={handleAzureConfigSaved} />
             {loading ? <p className="muted">Loading dashboard...</p> : null}
             {error ? <p className="form-error">{error}</p> : null}
             {dashboard ? <TeamBoard dashboard={dashboard} /> : null}
@@ -146,8 +110,7 @@ function JoinCodeDisplay({ joinCode }: { joinCode: string }) {
 
   return (
     <span className="join-code-display">
-      <span className="muted">Join code:</span>{" "}
-      <code>{joinCode}</code>
+      <span className="muted">Join code</span> <code className="mono">{joinCode}</code>
       <button className="button secondary button-sm" type="button" onClick={handleCopy}>
         {copied ? "Copied!" : "Copy"}
       </button>
@@ -173,12 +136,15 @@ function DashboardHeader({ dashboard, onRefresh }: { dashboard: Dashboard | null
   }
 
   return (
-    <section className="page-header">
+    <header className="page-header">
       <div>
-        <span className="eyebrow">Protected dashboard</span>
+        <span className="eyebrow">Team board</span>
         <h1>{dashboard?.team.name ?? "Team board"}</h1>
-        {dashboard?.team.joinCode ? <JoinCodeDisplay joinCode={dashboard.team.joinCode} /> : null}
-        <p className="muted">Goal progress, owner focus, and QA signals for the current team.</p>
+        <div className="header-stats">
+          {dashboard?.team.joinCode ? <JoinCodeDisplay joinCode={dashboard.team.joinCode} /> : null}
+          {dashboard?.team.joinCode ? <span className="dot">·</span> : null}
+          <span>{dashboard?.goals.length ?? 0} goals tracked</span>
+        </div>
       </div>
       <div className="header-actions">
         {refreshMessage ? <span className="muted">{refreshMessage}</span> : null}
@@ -186,353 +152,165 @@ function DashboardHeader({ dashboard, onRefresh }: { dashboard: Dashboard | null
           Switch team
         </Link>
         <button className="button secondary" type="button" onClick={handleRefresh} disabled={refreshing}>
-          {refreshing ? "Refreshing..." : "Refresh metrics"}
+          {refreshing ? "Refreshing..." : "Refresh"}
         </button>
         <Link className="button" to="/dashboard/goals/new">
           Create goal
         </Link>
       </div>
+    </header>
+  );
+}
+
+function KpiStrip({ dashboard, passRateTrend }: { dashboard: Dashboard; passRateTrend: number[] }) {
+  const kpis = deriveKpis(dashboard);
+
+  return (
+    <section className="kpi-strip" aria-label="Key quality metrics">
+      <div className="kpi-card">
+        <span className="eyebrow">Suite pass rate</span>
+        <div className="kpi-value-row">
+          <span className="kpi-value">
+            {kpis.passRate ?? "–"}
+            {kpis.passRate !== null ? <span className="kpi-unit">%</span> : null}
+          </span>
+        </div>
+        {passRateTrend.length > 1 ? <Sparkline data={passRateTrend} height={30} color="#1a8a7a" /> : null}
+      </div>
+      <div className="kpi-card">
+        <span className="eyebrow">Avg coverage</span>
+        <div className="kpi-value-row">
+          <span className="kpi-value">
+            {kpis.avgCoverage ?? "–"}
+            {kpis.avgCoverage !== null ? <span className="kpi-unit">%</span> : null}
+          </span>
+        </div>
+        <span className="kpi-note">Across unit, API, and UI suites</span>
+      </div>
+      <div className="kpi-card">
+        <span className="eyebrow">Goals at risk</span>
+        <div className="kpi-value-row">
+          <span className="kpi-value" style={kpis.atRisk > 0 ? { color: "#93341f" } : undefined}>
+            {kpis.atRisk}
+          </span>
+        </div>
+        <span className="kpi-note">of {kpis.totalGoals} total</span>
+      </div>
+      <div className="kpi-card">
+        <span className="eyebrow">On track</span>
+        <div className="kpi-value-row">
+          <span className="kpi-value">{kpis.onTrack}</span>
+          <span className="kpi-unit">/ {kpis.totalGoals}</span>
+        </div>
+        <span className="kpi-note">
+          {kpis.active} active · {kpis.completed} completed
+        </span>
+      </div>
     </section>
   );
 }
 
-function AzureDevOpsConfigPanel({ teamId, onSaved }: { teamId: string; onSaved: () => Promise<unknown> }) {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const [pipelinesMessage, setPipelinesMessage] = useState("");
-  const [error, setError] = useState("");
-  const [pipelines, setPipelines] = useState<AzurePipelineDefinition[]>([]);
-  const [pipelinesLoading, setPipelinesLoading] = useState(false);
-  const [draft, setDraft] = useState<AzureConfigDraft>(defaultAzureDraft);
-  const selectedPipeline = useMemo(
-    () => pipelines.find((pipeline) => String(pipeline.id) === draft.buildDefinitionId),
-    [draft.buildDefinitionId, pipelines],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadAzureConfig() {
-      setLoading(true);
-      setPipelinesLoading(true);
-      setError("");
-      setPipelinesMessage("");
-
-      try {
-        const { config } = await getMetricSourceConfig(teamId);
-        if (cancelled) return;
-
-        const settings = config?.settings ?? {};
-        const categoryMap = settings.categoryMap ?? {};
-
-        setDraft({
-          enabled: config?.enabled ?? false,
-          organization: typeof settings.organization === "string" ? settings.organization : "",
-          project: typeof settings.project === "string" ? settings.project : "",
-          buildDefinitionId: typeof settings.buildDefinitionId === "number" ? String(settings.buildDefinitionId) : "",
-          categoryMap: {
-            unit: categoryMap.unit?.runTitleIncludes ?? "unit",
-            api: categoryMap.api?.runTitleIncludes ?? "api",
-            ui: categoryMap.ui?.runTitleIncludes ?? "ui",
-          },
-        });
-
-        if (config?.enabled) {
-          const pipelinesResponse = await getAzurePipelines(teamId);
-          if (!cancelled) {
-            setPipelines(pipelinesResponse.pipelines);
-            setPipelinesMessage(
-              pipelinesResponse.pipelines.length > 0 ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.` : "No pipelines were found.",
-            );
-          }
-        } else if (!cancelled) {
-          setPipelines([]);
-          setPipelinesMessage("");
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : "Could not load Azure settings.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-          setPipelinesLoading(false);
-        }
-      }
-    }
-
-    void loadAzureConfig();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [teamId]);
-
-  async function handleReloadPipelines() {
-    if (!draft.enabled) {
-      setPipelines([]);
-      setPipelinesMessage("Enable Azure DevOps metrics before loading pipelines.");
-      return;
-    }
-
-    if (!draft.organization.trim() || !draft.project.trim()) {
-      setPipelines([]);
-      setPipelinesMessage("Organization and project are required to load pipelines.");
-      return;
-    }
-
-    setPipelinesLoading(true);
-    setError("");
-    setPipelinesMessage("");
-
-    try {
-      const buildDefinitionId = draft.buildDefinitionId.trim() ? Number(draft.buildDefinitionId) : undefined;
-      await saveMetricSourceConfig(teamId, {
-        source: "AZURE_DEVOPS",
-        enabled: draft.enabled,
-        settings: {
-          organization: draft.organization.trim(),
-          project: draft.project.trim(),
-          ...(Number.isFinite(buildDefinitionId) ? { buildDefinitionId } : {}),
-          categoryMap: {
-            unit: { runTitleIncludes: draft.categoryMap.unit.trim() || "unit" },
-            api: { runTitleIncludes: draft.categoryMap.api.trim() || "api" },
-            ui: { runTitleIncludes: draft.categoryMap.ui.trim() || "ui" },
-          },
-        },
-      });
-      const pipelinesResponse = await getAzurePipelines(teamId);
-      setPipelines(pipelinesResponse.pipelines);
-      setPipelinesMessage(
-        pipelinesResponse.pipelines.length > 0 ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.` : "No pipelines were found.",
-      );
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not reload Azure pipelines.");
-    } finally {
-      setPipelinesLoading(false);
-    }
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaving(true);
-    setError("");
-    setMessage("");
-
-    try {
-      const buildDefinitionId = draft.buildDefinitionId.trim() ? Number(draft.buildDefinitionId) : undefined;
-      await saveMetricSourceConfig(teamId, {
-        source: "AZURE_DEVOPS",
-        enabled: draft.enabled,
-        settings: {
-          organization: draft.organization.trim(),
-          project: draft.project.trim(),
-          ...(Number.isFinite(buildDefinitionId) ? { buildDefinitionId } : {}),
-          categoryMap: {
-            unit: { runTitleIncludes: draft.categoryMap.unit.trim() || "unit" },
-            api: { runTitleIncludes: draft.categoryMap.api.trim() || "api" },
-            ui: { runTitleIncludes: draft.categoryMap.ui.trim() || "ui" },
-          },
-        },
-      });
-      const reloaded = await getMetricSourceConfig(teamId);
-      const settings = reloaded.config?.settings ?? {};
-      const categoryMap = settings.categoryMap ?? {};
-      setDraft({
-        enabled: reloaded.config?.enabled ?? false,
-        organization: typeof settings.organization === "string" ? settings.organization : "",
-        project: typeof settings.project === "string" ? settings.project : "",
-        buildDefinitionId: typeof settings.buildDefinitionId === "number" ? String(settings.buildDefinitionId) : "",
-        categoryMap: {
-          unit: categoryMap.unit?.runTitleIncludes ?? "unit",
-          api: categoryMap.api?.runTitleIncludes ?? "api",
-          ui: categoryMap.ui?.runTitleIncludes ?? "ui",
-        },
-      });
-      if (reloaded.config?.enabled) {
-        try {
-          const pipelinesResponse = await getAzurePipelines(teamId);
-          setPipelines(pipelinesResponse.pipelines);
-          setPipelinesMessage(
-            pipelinesResponse.pipelines.length > 0 ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.` : "No pipelines were found.",
-          );
-        } catch {
-          setPipelines([]);
-          setPipelinesMessage("Pipeline list could not be refreshed.");
-        }
-      } else {
-        setPipelines([]);
-        setPipelinesMessage("");
-      }
-      await onSaved();
-      setMessage("Azure DevOps settings saved.");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save Azure settings.");
-    } finally {
-      setSaving(false);
-    }
-  }
+function ChartsRow({ passRatePoints }: { passRatePoints: number[] }) {
+  const hasRealPassRate = passRatePoints.length > 1;
 
   return (
-    <section className="board-section">
-      <div className="section-title">
+    <section className="charts-grid">
+      <article className="chart-card">
+        <div className="chart-card-header">
+          <div>
+            <span className="eyebrow">Coverage over time</span>
+            <h2>Test coverage · last 8 weeks</h2>
+          </div>
+          <div className="chart-legend">
+            <span>
+              <span className="chart-swatch" style={{ background: "#0e5a62" }} />
+              Unit
+            </span>
+            <span>
+              <span className="chart-swatch" style={{ background: "#c69a43" }} />
+              API
+            </span>
+            <span>
+              <span className="chart-swatch" style={{ background: "#b1482f" }} />
+              UI
+            </span>
+          </div>
+        </div>
+        <span className="sample-tag">SAMPLE SOURCE</span>
+        <LineChart
+          min={40}
+          max={100}
+          yTicks={[100, 80, 60, 40]}
+          xLabels={sampleCoverageTrendLabels}
+          series={[
+            { label: "Unit", color: "#0e5a62", values: sampleCoverageTrend.unit },
+            { label: "API", color: "#c69a43", values: sampleCoverageTrend.api },
+            { label: "UI", color: "#b1482f", values: sampleCoverageTrend.ui },
+          ]}
+        />
+      </article>
+
+      <article className="chart-card">
         <div>
-          <span className="eyebrow">Azure DevOps</span>
-          <h2>Connection settings</h2>
+          <span className="eyebrow">Pass rate over time</span>
+          <h2>Suite pass % · trending up</h2>
         </div>
-        <span className="muted">{loading ? "Loading..." : draft.enabled ? "Enabled" : "Disabled"}</span>
-      </div>
-
-      <p className="muted">
-        Save your Azure DevOps organization and project here. The PAT stays server-side in environment variables.
-      </p>
-
-      <form className="stacked-form" onSubmit={handleSubmit}>
-        <label className="inline-toggle">
-          <input
-            type="checkbox"
-            checked={draft.enabled}
-            onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.checked }))}
-          />
-          <span>Enable Azure DevOps metrics</span>
-        </label>
-
-        <label>
-          <span>Organization</span>
-          <input
-            value={draft.organization}
-            onChange={(event) => setDraft((current) => ({ ...current, organization: event.target.value }))}
-            placeholder="your-organization"
-          />
-        </label>
-
-        <label>
-          <span>Project</span>
-          <input
-            value={draft.project}
-            onChange={(event) => setDraft((current) => ({ ...current, project: event.target.value }))}
-            placeholder="your-project"
-          />
-        </label>
-
-        <label>
-          <span>Pipeline</span>
-          <select
-            value={draft.buildDefinitionId}
-            onChange={(event) => setDraft((current) => ({ ...current, buildDefinitionId: event.target.value }))}
-            disabled={pipelinesLoading || pipelines.length === 0}
-          >
-            <option value="">Any pipeline</option>
-            {pipelines.map((pipeline) => (
-              <option key={pipeline.id} value={pipeline.id}>
-                {pipeline.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="azure-pipeline-meta">
-          <span className="muted">
-            {selectedPipeline ? `Selected pipeline: ${selectedPipeline.name}` : "Selected pipeline: Any pipeline"}
-          </span>
-          <button className="button secondary" type="button" onClick={handleReloadPipelines} disabled={pipelinesLoading}>
-            {pipelinesLoading ? "Reloading..." : "Reload pipelines"}
-          </button>
-        </div>
-        {pipelinesMessage ? <p className="muted azure-pipeline-message">{pipelinesMessage}</p> : null}
-
-        <div className="metrics-grid azure-config-grid">
-          <label>
-            <span>Unit run title includes</span>
-            <input
-              value={draft.categoryMap.unit}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  categoryMap: { ...current.categoryMap, unit: event.target.value },
-                }))
-              }
-            />
-          </label>
-          <label>
-            <span>API run title includes</span>
-            <input
-              value={draft.categoryMap.api}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  categoryMap: { ...current.categoryMap, api: event.target.value },
-                }))
-              }
-            />
-          </label>
-          <label>
-            <span>UI run title includes</span>
-            <input
-              value={draft.categoryMap.ui}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  categoryMap: { ...current.categoryMap, ui: event.target.value },
-                }))
-              }
-            />
-          </label>
-        </div>
-
-        <div className="header-actions">
-          {message ? <span className="muted">{message}</span> : null}
-          <button className="button secondary" type="submit" disabled={saving || loading}>
-            {saving ? "Saving..." : "Save Azure settings"}
-          </button>
-        </div>
-      </form>
-
-      {error ? <p className="form-error">{error}</p> : null}
+        {hasRealPassRate ? (
+          <AreaChart min={80} max={100} yTicks={[100, 90, 80]} values={passRatePoints} xLabels={["Earliest", "Latest"]} />
+        ) : (
+          <p className="muted">Not enough history yet to chart a trend.</p>
+        )}
+      </article>
     </section>
   );
 }
 
 function TeamBoard({ dashboard }: { dashboard: Dashboard }) {
   const groupedGoals = useMemo(() => groupGoals(dashboard.goals), [dashboard.goals]);
-  const metricsByCategory = useMemo(
+  const [passRateSeries, setPassRateSeries] = useState<TestsOverTimeRow[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getTestsOverTime()
+      .then((response) => {
+        if (!cancelled) setPassRateSeries(response.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setPassRateSeries([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const categoryCards: CategoryCardData[] = useMemo(
     () =>
       (["unit", "api", "ui"] as const).map((category) => ({
         category,
         metrics: dashboard.metrics.filter((metric) => metric.category === category),
+        sparkline: sampleCategorySparklines[category],
       })),
     [dashboard.metrics],
   );
 
+  const passRatePoints = passRateSeries.map((row) => (row.total > 0 ? Math.round((row.passed / row.total) * 100) : 0));
+
   return (
     <>
-      <section className="metrics-grid" aria-label="QA metrics">
-        {metricsByCategory.map(({ category, metrics }) => (
-          <article className="metric-card" key={category}>
-            <span className="eyebrow">{categoryLabels[category]}</span>
-            <h2>{categoryLabels[category]} tests</h2>
-            {metrics.length > 0 ? (
-              metrics.map((metric) => (
-                <div className="metric-row" key={metric.id}>
-                  <span>{metricLabels[metric.kind]}</span>
-                  <strong className={metric.kind === "tests-passing" ? statusClass(metric.status) : ""}>
-                    {formatMetricValue(metric)}
-                  </strong>
-                </div>
-              ))
-            ) : (
-              <p className="muted">Unavailable</p>
-            )}
-          </article>
-        ))}
+      <KpiStrip dashboard={dashboard} passRateTrend={passRatePoints} />
+      <ChartsRow passRatePoints={passRatePoints} />
+
+      <section className="board-section">
+        <div className="section-title">
+          <h2>By category</h2>
+          <span className="sample-tag">SAMPLE SOURCE</span>
+        </div>
+        <CategoryMetricsRow cards={categoryCards} />
       </section>
 
       <section className="board-section">
         <div className="section-title">
-          <div>
-            <span className="eyebrow">Goals</span>
-            <h2>Team goals</h2>
-          </div>
+          <h2>Team goals</h2>
           <span className="muted">{dashboard.goals.length} total</span>
         </div>
 

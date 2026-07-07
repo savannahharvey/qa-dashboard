@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #ecefec; color: #10201f; font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  ::selection { background: #c69a43; color: #10201f; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+</style>
+</helmet>
+
+<!-- ============ LANDING ============ -->
+<sc-if value="{{ showLanding }}" hint-placeholder-val="{{ false }}">
+  <main style="min-height:100vh;background:#0e2426;color:#eef2f0;padding:1.75rem clamp(1.25rem,5vw,4rem);display:flex;flex-direction:column;">
+    <nav style="display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto;width:100%;">
+      <span style="display:inline-flex;align-items:center;gap:.7rem;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:2.3rem;height:2.3rem;background:#c69a43;border-radius:9px;color:#10201f;font-weight:700;" class="mono">QA</span>
+        <strong style="letter-spacing:-.01em;">QA&nbsp;Dashboard</strong>
+      </span>
+      <div style="display:flex;gap:.6rem;">
+        <button onClick="{{ goSignIn }}" style="min-height:2.6rem;padding:.6rem 1.1rem;border-radius:9px;font-weight:600;cursor:pointer;background:transparent;border:1px solid #33534f;color:#eef2f0;">Sign in</button>
+        <button onClick="{{ goSignUp }}" style="min-height:2.6rem;padding:.6rem 1.1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#c69a43;border:1px solid #c69a43;color:#10201f;">Sign up</button>
+      </div>
+    </nav>
+    <section style="max-width:1200px;margin:auto;width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,0.9fr);gap:clamp(2rem,5vw,5rem);align-items:center;padding:5vh 0;">
+      <div style="display:grid;gap:1.5rem;">
+        <span class="mono" style="font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#c69a43;">Goals · Ownership · Quality signals</span>
+        <h1 style="margin:0;font-size:clamp(2.6rem,5vw,4rem);line-height:1.02;letter-spacing:-.02em;font-weight:600;">Every test signal, next to the goal it&nbsp;supports.</h1>
+        <p style="margin:0;color:#adbfba;font-size:1.15rem;line-height:1.6;max-width:40rem;">Track team goals, individual ownership, and QA coverage in one focused place — so the next conversation starts from shared evidence, not scattered spreadsheets.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:.7rem;margin-top:.3rem;">
+          <button onClick="{{ goSignUp }}" style="min-height:2.9rem;padding:.75rem 1.4rem;border-radius:9px;font-weight:600;cursor:pointer;background:#c69a43;border:1px solid #c69a43;color:#10201f;">Create account</button>
+          <button onClick="{{ goSignIn }}" style="min-height:2.9rem;padding:.75rem 1.4rem;border-radius:9px;font-weight:600;cursor:pointer;background:transparent;border:1px solid #33534f;color:#eef2f0;">Sign in</button>
+        </div>
+      </div>
+      <div style="background:#122e30;border:1px solid #24413f;border-radius:16px;padding:1.25rem;box-shadow:0 30px 80px rgba(0,0,0,.35);display:grid;gap:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span class="mono" style="font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:#7f938e;">Suite health</span>
+          <span class="mono" style="font-size:.72rem;color:#5fbf9f;">▲ live</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;">
+          <div style="background:#0e2426;border-radius:10px;padding:.85rem;"><div class="mono" style="font-size:1.7rem;color:#eef2f0;">96%</div><div style="font-size:.72rem;color:#7f938e;margin-top:.2rem;">Pass rate</div></div>
+          <div style="background:#0e2426;border-radius:10px;padding:.85rem;"><div class="mono" style="font-size:1.7rem;color:#eef2f0;">72%</div><div style="font-size:.72rem;color:#7f938e;margin-top:.2rem;">Avg coverage</div></div>
+          <div style="background:#0e2426;border-radius:10px;padding:.85rem;"><div class="mono" style="font-size:1.7rem;color:#e2b45e;">2</div><div style="font-size:.72rem;color:#7f938e;margin-top:.2rem;">At risk</div></div>
+        </div>
+        <svg viewBox="0 0 320 90" preserveAspectRatio="none" style="width:100%;height:90px;">
+          <polyline points="{{ landingSpark }}" fill="none" stroke="#5fbf9f" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
+        </svg>
+      </div>
+    </section>
+  </main>
+</sc-if>
+
+<!-- ============ AUTH ============ -->
+<sc-if value="{{ showAuth }}" hint-placeholder-val="{{ false }}">
+  <main style="display:grid;place-items:center;min-height:100vh;padding:1.5rem;background:#0e2426;">
+    <section style="background:#ffffff;border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.3);display:grid;gap:1.4rem;max-width:440px;width:100%;padding:clamp(1.5rem,4vw,2.25rem);">
+      <span style="display:inline-flex;align-items:center;gap:.7rem;">
+        <span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:2.3rem;height:2.3rem;background:#c69a43;border-radius:9px;color:#10201f;font-weight:700;">QA</span>
+        <strong>QA Dashboard</strong>
+      </span>
+      <div>
+        <span class="mono" style="font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:#0e5a62;">{{ authEyebrow }}</span>
+        <h1 style="margin:.35rem 0 .5rem;font-size:2rem;letter-spacing:-.02em;font-weight:600;">{{ authTitle }}</h1>
+        <p style="margin:0;color:#64736e;line-height:1.5;">{{ authSubtitle }}</p>
+      </div>
+      <form style="display:grid;gap:.9rem;" onSubmit="{{ onAuthSubmit }}">
+        <label style="display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Username<input autoComplete="username" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"></label>
+        <sc-if value="{{ isSignUp }}" hint-placeholder-val="{{ false }}">
+          <label style="display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Display name<input autoComplete="name" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"></label>
+        </sc-if>
+        <label style="display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Password<input type="password" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"></label>
+        <button type="button" onClick="{{ goDashboard }}" style="margin-top:.3rem;min-height:2.9rem;padding:.75rem 1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#0e5a62;border:1px solid #0e5a62;color:#fff;">{{ authButton }}</button>
+      </form>
+      <p style="margin:0;color:#64736e;font-size:.92rem;">{{ authSwitchText }} <a onClick="{{ toggleAuth }}" style="cursor:pointer;font-weight:600;color:#0e5a62;">{{ authSwitchLink }}</a></p>
+    </section>
+  </main>
+</sc-if>
+
+<!-- ============ APP ============ -->
+<sc-if value="{{ showApp }}" hint-placeholder-val="{{ true }}">
+  <div style="display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh;">
+    <aside style="background:#0e2426;color:#b7c6c2;display:flex;flex-direction:column;gap:2rem;padding:1.5rem 1.1rem;position:sticky;top:0;height:100vh;">
+      <span style="display:inline-flex;align-items:center;gap:.7rem;cursor:pointer;padding:0 .4rem;" onClick="{{ goDashboard }}">
+        <span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:2.2rem;height:2.2rem;background:#c69a43;border-radius:9px;color:#10201f;font-weight:700;">QA</span>
+        <span><strong style="display:block;color:#eef2f0;letter-spacing:-.01em;">QA Dashboard</strong><small class="mono" style="display:block;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:#6f827d;margin-top:.15rem;">Team progress</small></span>
+      </span>
+      <nav style="display:grid;gap:.2rem;">
+        <a onClick="{{ goDashboard }}" style="{{ navDashStyle }}"><span style="{{ navDashDot }}"></span>Dashboard</a>
+        <a onClick="{{ goInsights }}" style="{{ navInsightsStyle }}"><span style="{{ navInsightsDot }}"></span>Insights</a>
+        <a onClick="{{ goTestResults }}" style="{{ navTestStyle }}"><span style="{{ navTestDot }}"></span>Test results</a>
+        <a onClick="{{ goIntegrations }}" style="{{ navIntegStyle }}"><span style="{{ navIntegDot }}"></span>Integrations</a>
+        <a onClick="{{ goCreateGoal }}" style="{{ navGoalStyle }}"><span style="{{ navGoalDot }}"></span>Create goal</a>
+      </nav>
+      <div style="margin-top:auto;display:grid;gap:.9rem;">
+        <div style="border-top:1px solid #1c3a3b;padding-top:1rem;display:flex;align-items:center;gap:.7rem;">
+          <span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:2.1rem;height:2.1rem;border-radius:50%;background:#16383a;color:#c8d6d1;font-size:.8rem;">SR</span>
+          <span style="min-width:0;"><strong style="display:block;color:#dbe6e2;font-size:.9rem;">Sam Rivera</strong><small style="display:block;color:#6f827d;font-size:.72rem;">QA Dashboard Team</small></span>
+        </div>
+        <button onClick="{{ goLanding }}" style="min-height:2.5rem;padding:.55rem 1rem;border-radius:9px;font-weight:600;font-size:.88rem;cursor:pointer;background:transparent;border:1px solid #26433f;color:#b7c6c2;">Sign out</button>
+      </div>
+    </aside>
+
+    <div style="min-width:0;">
+      <!-- DASHBOARD -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+        <main style="padding:clamp(1.25rem,3.5vw,2.5rem);display:grid;gap:1.75rem;max-width:1280px;">
+          <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem;">
+            <div>
+              <span class="mono" style="font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:#0e5a62;">Team board</span>
+              <h1 style="margin:.4rem 0 .5rem;font-size:2.4rem;letter-spacing:-.025em;font-weight:600;">QA Dashboard Team</h1>
+              <div style="display:flex;align-items:center;gap:.9rem;flex-wrap:wrap;color:#64736e;font-size:.9rem;">
+                <span style="display:inline-flex;align-items:center;gap:.4rem;">Join code <code class="mono" style="background:#dfe6e2;border-radius:6px;padding:.15rem .45rem;color:#10201f;font-size:.82rem;">QA-232</code></span>
+                <span style="color:#c3ccc8;">·</span>
+                <span>3 members · 6 goals tracked</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;">
+              <button style="min-height:2.6rem;padding:.6rem 1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#fff;border:1px solid #d5ddd8;color:#10201f;">Switch team</button>
+              <button style="min-height:2.6rem;padding:.6rem 1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#fff;border:1px solid #d5ddd8;color:#10201f;">Refresh</button>
+              <button onClick="{{ goCreateGoal }}" style="min-height:2.6rem;padding:.6rem 1.1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#0e5a62;border:1px solid #0e5a62;color:#fff;">Create goal</button>
+            </div>
+          </header>
+
+          <!-- KPI STRIP -->
+          <section style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;">
+            <div style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.1rem 1.15rem;display:grid;gap:.5rem;">
+              <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">Suite pass rate</span>
+              <div style="display:flex;align-items:baseline;gap:.5rem;"><span class="mono" style="font-size:2.2rem;font-weight:500;letter-spacing:-.02em;">96<span style="font-size:1.1rem;color:#8c9a95;">%</span></span><span class="mono" style="font-size:.74rem;font-weight:500;color:#16694f;background:#e2f1ec;border-radius:6px;padding:.12rem .4rem;">▲ 1pt</span></div>
+              <svg viewBox="0 0 120 34" preserveAspectRatio="none" style="width:100%;height:30px;"><polyline points="{{ passSpark }}" fill="none" stroke="#1a8a7a" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline></svg>
+            </div>
+            <div style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.1rem 1.15rem;display:grid;gap:.5rem;">
+              <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">Avg coverage</span>
+              <div style="display:flex;align-items:baseline;gap:.5rem;"><span class="mono" style="font-size:2.2rem;font-weight:500;letter-spacing:-.02em;">72<span style="font-size:1.1rem;color:#8c9a95;">%</span></span><span class="mono" style="font-size:.74rem;font-weight:500;color:#16694f;background:#e2f1ec;border-radius:6px;padding:.12rem .4rem;">▲ 1pt</span></div>
+              <svg viewBox="0 0 120 34" preserveAspectRatio="none" style="width:100%;height:30px;"><polyline points="{{ covSpark }}" fill="none" stroke="#c69a43" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline></svg>
+            </div>
+            <div style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.1rem 1.15rem;display:grid;gap:.5rem;">
+              <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">Goals at risk</span>
+              <div style="display:flex;align-items:baseline;gap:.5rem;"><span class="mono" style="font-size:2.2rem;font-weight:500;letter-spacing:-.02em;color:#93341f;">2</span></div>
+              <span style="font-size:.8rem;color:#64736e;">UI coverage &amp; 1 supporting goal</span>
+            </div>
+            <div style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.1rem 1.15rem;display:grid;gap:.5rem;">
+              <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">On track</span>
+              <div style="display:flex;align-items:baseline;gap:.5rem;"><span class="mono" style="font-size:2.2rem;font-weight:500;letter-spacing:-.02em;">4</span><span style="font-size:.85rem;color:#8c9a95;">/ 6</span></div>
+              <span style="font-size:.8rem;color:#64736e;">2 active · 2 completed</span>
+            </div>
+          </section>
+
+          <!-- CHARTS -->
+          <section style="display:grid;grid-template-columns:1.4fr 1fr;gap:1rem;">
+            <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.25rem 1.35rem;display:grid;gap:1rem;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+                <div>
+                  <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">Coverage over time</span>
+                  <h2 style="margin:.3rem 0 0;font-size:1.15rem;font-weight:600;">Test coverage · last 8 weeks</h2>
+                </div>
+                <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                  <span style="display:inline-flex;align-items:center;gap:.4rem;font-size:.82rem;color:#33433f;"><span style="width:.7rem;height:.7rem;border-radius:2px;background:#0e5a62;"></span>Unit</span>
+                  <span style="display:inline-flex;align-items:center;gap:.4rem;font-size:.82rem;color:#33433f;"><span style="width:.7rem;height:.7rem;border-radius:2px;background:#c69a43;"></span>API</span>
+                  <span style="display:inline-flex;align-items:center;gap:.4rem;font-size:.82rem;color:#33433f;"><span style="width:.7rem;height:.7rem;border-radius:2px;background:#b1482f;"></span>UI</span>
+                </div>
+              </div>
+              <div style="position:relative;">
+                <svg viewBox="0 0 640 220" style="width:100%;height:auto;display:block;">
+                  <line x1="34" y1="16" x2="640" y2="16" stroke="#eef2f0"></line>
+                  <line x1="34" y1="75" x2="640" y2="75" stroke="#eef2f0"></line>
+                  <line x1="34" y1="133" x2="640" y2="133" stroke="#eef2f0"></line>
+                  <line x1="34" y1="192" x2="640" y2="192" stroke="#e0e6e2"></line>
+                  <text x="0" y="20" class="mono" fill="#a4b0ab" font-size="11">100</text>
+                  <text x="4" y="79" class="mono" fill="#a4b0ab" font-size="11">80</text>
+                  <text x="4" y="137" class="mono" fill="#a4b0ab" font-size="11">60</text>
+                  <text x="4" y="196" class="mono" fill="#a4b0ab" font-size="11">40</text>
+                  <polyline points="{{ covUnitPts }}" fill="none" stroke="#0e5a62" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
+                  <polyline points="{{ covApiPts }}" fill="none" stroke="#c69a43" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
+                  <polyline points="{{ covUiPts }}" fill="none" stroke="#b1482f" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
+                  <circle cx="630" cy="{{ covUnitEndY }}" r="3.5" fill="#0e5a62"></circle>
+                  <circle cx="630" cy="{{ covApiEndY }}" r="3.5" fill="#c69a43"></circle>
+                  <circle cx="630" cy="{{ covUiEndY }}" r="3.5" fill="#b1482f"></circle>
+                </svg>
+                <div style="display:flex;justify-content:space-between;padding-left:34px;margin-top:.3rem;">
+                  <span class="mono" style="font-size:.68rem;color:#a4b0ab;">May 6</span>
+                  <span class="mono" style="font-size:.68rem;color:#a4b0ab;">Jun 24</span>
+                </div>
+              </div>
+            </article>
+
+            <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.25rem 1.35rem;display:grid;gap:1rem;">
+              <div>
+                <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">Pass rate over time</span>
+                <h2 style="margin:.3rem 0 0;font-size:1.15rem;font-weight:600;">Suite pass % · trending up</h2>
+              </div>
+              <div>
+                <svg viewBox="0 0 640 200" style="width:100%;height:auto;display:block;">
+                  <defs><linearGradient id="passfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a8a7a" stop-opacity="0.22"></stop><stop offset="1" stop-color="#1a8a7a" stop-opacity="0"></stop></linearGradient></defs>
+                  <line x1="34" y1="16" x2="640" y2="16" stroke="#eef2f0"></line>
+                  <line x1="34" y1="94" x2="640" y2="94" stroke="#eef2f0"></line>
+                  <line x1="34" y1="172" x2="640" y2="172" stroke="#e0e6e2"></line>
+                  <text x="0" y="20" class="mono" fill="#a4b0ab" font-size="11">100</text>
+                  <text x="4" y="98" class="mono" fill="#a4b0ab" font-size="11">90</text>
+                  <text x="4" y="176" class="mono" fill="#a4b0ab" font-size="11">80</text>
+                  <path d="{{ passArea }}" fill="url(#passfill)"></path>
+                  <polyline points="{{ passPts }}" fill="none" stroke="#1a8a7a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
+                  <circle cx="630" cy="{{ passEndY }}" r="4" fill="#1a8a7a"></circle>
+                </svg>
+                <div style="display:flex;justify-content:space-between;padding-left:34px;margin-top:.3rem;">
+                  <span class="mono" style="font-size:.68rem;color:#a4b0ab;">May 6</span>
+                  <span class="mono" style="font-size:.68rem;color:#a4b0ab;">Jun 24</span>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <!-- CATEGORY METRICS -->
+          <section style="display:grid;gap:.9rem;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;">
+              <h2 style="margin:0;font-size:1.15rem;font-weight:600;">By category</h2>
+              <span class="mono" style="font-size:.72rem;color:#8c9a95;">SAMPLE SOURCE</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;">
+              <sc-for list="{{ metricCards }}" as="m" hint-placeholder-count="3">
+                <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.15rem 1.25rem;display:grid;gap:.9rem;border-top:3px solid {{ m.color }};">
+                  <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <h3 style="margin:0;font-size:1.05rem;font-weight:600;">{{ m.heading }}</h3>
+                    <sc-if value="{{ m.passing }}" hint-placeholder-val="{{ true }}"><span class="mono" style="font-size:.72rem;font-weight:500;padding:.25rem .6rem;border-radius:999px;background:#e2f1ec;color:#16694f;">● Passing</span></sc-if>
+                    <sc-if value="{{ m.failing }}" hint-placeholder-val="{{ false }}"><span class="mono" style="font-size:.72rem;font-weight:500;padding:.25rem .6rem;border-radius:999px;background:#f6e2db;color:#93341f;">● Failing</span></sc-if>
+                  </div>
+                  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:.75rem;">
+                    <div>
+                      <div class="mono" style="font-size:2.1rem;font-weight:500;letter-spacing:-.02em;line-height:1;">{{ m.coverage }}<span style="font-size:1rem;color:#8c9a95;">%</span></div>
+                      <div style="font-size:.76rem;color:#64736e;margin-top:.3rem;">Test coverage</div>
+                    </div>
+                    <svg viewBox="0 0 120 44" preserveAspectRatio="none" style="width:120px;height:40px;"><polyline points="{{ m.spark }}" fill="none" stroke="{{ m.color }}" stroke-width="1.8" vector-effect="non-scaling-stroke"></polyline></svg>
+                  </div>
+                </article>
+              </sc-for>
+            </div>
+          </section>
+
+          <!-- GOALS -->
+          <section style="display:grid;gap:1rem;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;">
+              <h2 style="margin:0;font-size:1.15rem;font-weight:600;">Team goals</h2>
+              <span class="mono" style="font-size:.72rem;color:#8c9a95;">3 TEAM · 3 INDIVIDUAL</span>
+            </div>
+            <div style="display:grid;gap:1.1rem;">
+              <sc-for list="{{ teamGoals }}" as="g" hint-placeholder-count="3">
+                <div style="display:grid;gap:.6rem;">
+                  <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.2rem 1.35rem;display:grid;gap:.95rem;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;">
+                      <div style="min-width:0;">
+                        <span class="mono" style="font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:#8c9a95;">Team goal</span>
+                        <h3 style="margin:.25rem 0 0;font-size:1.15rem;font-weight:600;letter-spacing:-.01em;">{{ g.title }}</h3>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:.7rem;flex-shrink:0;">
+                        <sc-if value="{{ g.isActive }}" hint-placeholder-val="{{ true }}"><span class="mono" style="font-size:.72rem;font-weight:500;padding:.28rem .65rem;border-radius:999px;background:#e3edf0;color:#16545c;">Active</span></sc-if>
+                        <sc-if value="{{ g.isCompleted }}" hint-placeholder-val="{{ false }}"><span class="mono" style="font-size:.72rem;font-weight:500;padding:.28rem .65rem;border-radius:999px;background:#e2f1ec;color:#16694f;">Completed</span></sc-if>
+                        <sc-if value="{{ g.isAtRisk }}" hint-placeholder-val="{{ false }}"><span class="mono" style="font-size:.72rem;font-weight:500;padding:.28rem .65rem;border-radius:999px;background:#f7ecd6;color:#8a6318;">At risk</span></sc-if>
+                        <button onClick="{{ goCreateGoal }}" style="min-height:2.2rem;padding:.4rem .85rem;border-radius:8px;font-weight:600;font-size:.85rem;cursor:pointer;background:#fff;border:1px solid #d5ddd8;color:#10201f;">Edit</button>
+                      </div>
+                    </div>
+                    <p style="margin:0;color:#52605d;line-height:1.55;font-size:.95rem;">{{ g.description }}</p>
+                    <div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;">
+                      <div style="display:grid;gap:.4rem;">
+                        <div style="background:#e8eeeb;border-radius:999px;height:.55rem;overflow:hidden;"><span style="display:block;height:100%;border-radius:inherit;background:{{ g.barColor }};width:{{ g.width }};"></span></div>
+                        <div style="display:flex;gap:1rem;color:#64736e;font-size:.82rem;flex-wrap:wrap;">
+                          <span class="mono" style="color:#10201f;">{{ g.current }}{{ g.unit }} <span style="color:#a4b0ab;">/ {{ g.target }}{{ g.unit }} target</span></span>
+                          <span>{{ g.metric }} · {{ g.cat }}</span>
+                        </div>
+                      </div>
+                      <div style="text-align:right;"><span class="mono" style="font-size:1.5rem;font-weight:500;color:{{ g.barColor }};">{{ g.percentLabel }}</span></div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.5rem;border-top:1px solid #eef2f0;padding-top:.75rem;">
+                      <span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:1.7rem;height:1.7rem;border-radius:50%;background:#eef2f0;color:#33433f;font-size:.7rem;">{{ g.initials }}</span>
+                      <span style="font-size:.85rem;color:#52605d;">{{ g.owner }}</span>
+                    </div>
+                  </article>
+                  <sc-for list="{{ g.children }}" as="c" hint-placeholder-count="1">
+                    <article style="position:relative;margin-left:1.4rem;background:#fbfcfb;border:1px solid #e6ebe8;border-radius:12px;padding:1rem 1.2rem;display:grid;gap:.75rem;">
+                      <span style="position:absolute;left:-.7rem;top:1.1rem;bottom:1.1rem;width:2px;background:#c69a43;border-radius:2px;"></span>
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;">
+                        <div style="min-width:0;">
+                          <span class="mono" style="font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:#a4b0ab;">Supports · {{ c.owner }}</span>
+                          <h3 style="margin:.2rem 0 0;font-size:.98rem;font-weight:600;">{{ c.title }}</h3>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:.6rem;flex-shrink:0;">
+                          <sc-if value="{{ c.isActive }}" hint-placeholder-val="{{ true }}"><span class="mono" style="font-size:.68rem;font-weight:500;padding:.22rem .55rem;border-radius:999px;background:#e3edf0;color:#16545c;">Active</span></sc-if>
+                          <sc-if value="{{ c.isCompleted }}" hint-placeholder-val="{{ false }}"><span class="mono" style="font-size:.68rem;font-weight:500;padding:.22rem .55rem;border-radius:999px;background:#e2f1ec;color:#16694f;">Completed</span></sc-if>
+                          <sc-if value="{{ c.isAtRisk }}" hint-placeholder-val="{{ false }}"><span class="mono" style="font-size:.68rem;font-weight:500;padding:.22rem .55rem;border-radius:999px;background:#f7ecd6;color:#8a6318;">At risk</span></sc-if>
+                        </div>
+                      </div>
+                      <div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;">
+                        <div style="background:#e8eeeb;border-radius:999px;height:.45rem;overflow:hidden;"><span style="display:block;height:100%;border-radius:inherit;background:{{ c.barColor }};width:{{ c.width }};"></span></div>
+                        <span class="mono" style="font-size:.9rem;color:{{ c.barColor }};font-weight:500;">{{ c.percentLabel }}</span>
+                      </div>
+                    </article>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+        </main>
+      </sc-if>
+
+      <!-- TEST RESULTS -->
+      <sc-if value="{{ isTestResults }}" hint-placeholder-val="{{ false }}">
+        <main style="padding:clamp(1.25rem,3.5vw,2.5rem);display:grid;gap:1.75rem;max-width:1280px;">
+          <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem;">
+            <div>
+              <span class="mono" style="font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:#0e5a62;">Metrics · Azure DevOps</span>
+              <h1 style="margin:.4rem 0 .5rem;font-size:2.4rem;letter-spacing:-.025em;font-weight:600;">Test results over time</h1>
+              <p style="margin:0;color:#64736e;">Live coverage and pass-rate history from the connected pipeline.</p>
+            </div>
+            <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+              <select style="min-height:2.6rem;padding:.5rem .8rem;border-radius:9px;border:1px solid #d5ddd8;background:#fff;font-weight:600;"><option>Last 8 weeks</option><option>Last 4 weeks</option><option>Last quarter</option></select>
+              <button style="min-height:2.6rem;padding:.6rem 1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#fff;border:1px solid #d5ddd8;color:#10201f;">Export CSV</button>
+              <button style="min-height:2.6rem;padding:.6rem 1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#0e5a62;border:1px solid #0e5a62;color:#fff;">Print / PDF</button>
+            </div>
+          </header>
+
+          <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.5rem 1.6rem;display:grid;gap:1.25rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+              <div>
+                <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">Coverage by category</span>
+                <h2 style="margin:.3rem 0 0;font-size:1.25rem;font-weight:600;">All suites · last 8 weeks</h2>
+              </div>
+              <div style="display:flex;gap:1.1rem;flex-wrap:wrap;">
+                <span style="display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;color:#33433f;"><span style="width:.7rem;height:.7rem;border-radius:2px;background:#0e5a62;"></span>Unit 82%</span>
+                <span style="display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;color:#33433f;"><span style="width:.7rem;height:.7rem;border-radius:2px;background:#c69a43;"></span>API 74%</span>
+                <span style="display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;color:#33433f;"><span style="width:.7rem;height:.7rem;border-radius:2px;background:#b1482f;"></span>UI 61%</span>
+              </div>
+            </div>
+            <svg viewBox="0 0 960 300" style="width:100%;height:auto;display:block;">
+              <line x1="34" y1="24" x2="960" y2="24" stroke="#eef2f0"></line>
+              <line x1="34" y1="105" x2="960" y2="105" stroke="#eef2f0"></line>
+              <line x1="34" y1="186" x2="960" y2="186" stroke="#eef2f0"></line>
+              <line x1="34" y1="267" x2="960" y2="267" stroke="#e0e6e2"></line>
+              <text x="0" y="28" class="mono" fill="#a4b0ab" font-size="12">100</text>
+              <text x="6" y="109" class="mono" fill="#a4b0ab" font-size="12">80</text>
+              <text x="6" y="190" class="mono" fill="#a4b0ab" font-size="12">60</text>
+              <text x="6" y="271" class="mono" fill="#a4b0ab" font-size="12">40</text>
+              <polyline points="{{ covUnitPtsL }}" fill="none" stroke="#0e5a62" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
+              <polyline points="{{ covApiPtsL }}" fill="none" stroke="#c69a43" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
+              <polyline points="{{ covUiPtsL }}" fill="none" stroke="#b1482f" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
+            </svg>
+            <div style="display:flex;justify-content:space-between;padding-left:34px;">
+              <span class="mono" style="font-size:.72rem;color:#a4b0ab;">May 6</span>
+              <span class="mono" style="font-size:.72rem;color:#a4b0ab;">Jun 24</span>
+            </div>
+          </article>
+
+          <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.4rem 1.5rem;display:grid;gap:1.1rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+              <div>
+                <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">Reliability</span>
+                <h2 style="margin:.3rem 0 0;font-size:1.25rem;font-weight:600;">Failing most often</h2>
+              </div>
+              <span style="font-size:.85rem;color:#64736e;max-width:22rem;">Ranked by fail rate across the last 10 runs. <span class="mono" style="color:#93341f;">Flaky</span> = passes and fails without code changes.</span>
+            </div>
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:.9rem 1.5rem;align-items:center;">
+              <span class="mono" style="font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:#a4b0ab;">Test</span>
+              <span class="mono" style="font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:#a4b0ab;">Last 10 runs</span>
+              <span class="mono" style="font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:#a4b0ab;text-align:right;">Fail rate</span>
+              <span class="mono" style="font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:#a4b0ab;text-align:right;">Last failed</span>
+              <sc-for list="{{ flakyTests }}" as="t" hint-placeholder-count="5">
+                <div style="grid-column:1 / -1;height:1px;background:#eef2f0;"></div>
+                <div style="min-width:0;">
+                  <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+                    <span class="mono" style="font-size:.92rem;color:#10201f;">{{ t.name }}</span>
+                    <sc-if value="{{ t.flaky }}" hint-placeholder-val="{{ false }}"><span class="mono" style="font-size:.62rem;font-weight:500;padding:.1rem .4rem;border-radius:5px;background:#f6e2db;color:#93341f;">FLAKY</span></sc-if>
+                  </div>
+                  <span style="font-size:.78rem;color:#8c9a95;">{{ t.suite }}</span>
+                </div>
+                <div style="display:flex;gap:3px;">
+                  <sc-for list="{{ t.runs }}" as="r" hint-placeholder-count="10">
+                    <span style="width:8px;height:20px;border-radius:2px;background:{{ r.bg }};"></span>
+                  </sc-for>
+                </div>
+                <span class="mono" style="font-size:1rem;font-weight:500;color:#93341f;text-align:right;">{{ t.rate }}</span>
+                <span class="mono" style="font-size:.85rem;color:#64736e;text-align:right;">{{ t.last }}</span>
+              </sc-for>
+            </div>
+          </article>
+
+          <section style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;">
+            <sc-for list="{{ metricCards }}" as="m" hint-placeholder-count="3">
+              <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.15rem 1.25rem;display:grid;gap:.9rem;border-top:3px solid {{ m.color }};">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <h3 style="margin:0;font-size:1.05rem;font-weight:600;">{{ m.heading }}</h3>
+                  <sc-if value="{{ m.passing }}" hint-placeholder-val="{{ true }}"><span class="mono" style="font-size:.72rem;font-weight:500;padding:.25rem .6rem;border-radius:999px;background:#e2f1ec;color:#16694f;">● Passing</span></sc-if>
+                  <sc-if value="{{ m.failing }}" hint-placeholder-val="{{ false }}"><span class="mono" style="font-size:.72rem;font-weight:500;padding:.25rem .6rem;border-radius:999px;background:#f6e2db;color:#93341f;">● Failing</span></sc-if>
+                </div>
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:.75rem;">
+                  <div><div class="mono" style="font-size:2.1rem;font-weight:500;letter-spacing:-.02em;line-height:1;">{{ m.coverage }}<span style="font-size:1rem;color:#8c9a95;">%</span></div><div style="font-size:.76rem;color:#64736e;margin-top:.3rem;">Coverage</div></div>
+                  <svg viewBox="0 0 120 44" preserveAspectRatio="none" style="width:120px;height:40px;"><polyline points="{{ m.spark }}" fill="none" stroke="{{ m.color }}" stroke-width="1.8" vector-effect="non-scaling-stroke"></polyline></svg>
+                </div>
+              </article>
+            </sc-for>
+          </section>
+        </main>
+      </sc-if>
+
+      <!-- INSIGHTS -->
+      <sc-if value="{{ isInsights }}" hint-placeholder-val="{{ false }}">
+        <main style="padding:clamp(1.25rem,3.5vw,2.5rem);display:grid;gap:1.75rem;max-width:1280px;">
+          <header>
+            <span class="mono" style="font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:#0e5a62;">Analytics</span>
+            <h1 style="margin:.4rem 0 .5rem;font-size:2.4rem;letter-spacing:-.025em;font-weight:600;">Insights</h1>
+            <p style="margin:0;color:#64736e;max-width:46rem;">Signals derived from your connected pipeline and repository — how close automation is to your codebase, whether the test mix is healthy, and where quality gaps hide.</p>
+          </header>
+
+          <section style="display:grid;grid-template-columns:1.15fr .85fr;gap:1rem;">
+            <!-- CI/CD readiness -->
+            <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.35rem 1.5rem;display:grid;gap:1.2rem;">
+              <div>
+                <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">CI/CD readiness</span>
+                <h2 style="margin:.3rem 0 0;font-size:1.25rem;font-weight:600;">Automation vs. your codebase</h2>
+              </div>
+              <div style="display:flex;gap:1.6rem;align-items:center;flex-wrap:wrap;">
+                <div style="position:relative;width:150px;height:150px;flex-shrink:0;">
+                  <svg viewBox="0 0 140 140" style="width:150px;height:150px;">
+                    <circle cx="70" cy="70" r="52" fill="none" stroke="#eef2f0" stroke-width="14"></circle>
+                    <circle cx="70" cy="70" r="52" fill="none" stroke="#0e5a62" stroke-width="14" stroke-linecap="round" stroke-dasharray="{{ cicdDash }}" transform="rotate(-90 70 70)"></circle>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.1rem;">
+                    <span class="mono" style="font-size:2.3rem;font-weight:500;letter-spacing:-.02em;line-height:1;">{{ cicdScore }}</span>
+                    <span class="mono" style="font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:#8c9a95;">/ 100 · getting there</span>
+                  </div>
+                </div>
+                <div style="flex:1;min-width:220px;display:grid;gap:.85rem;">
+                  <sc-for list="{{ cicdFactors }}" as="f" hint-placeholder-count="5">
+                    <div style="display:grid;gap:.35rem;">
+                      <div style="display:flex;justify-content:space-between;gap:1rem;">
+                        <span style="font-size:.85rem;color:#33433f;">{{ f.label }}</span>
+                        <span class="mono" style="font-size:.85rem;color:#10201f;">{{ f.val }}</span>
+                      </div>
+                      <div style="background:#eef2f0;border-radius:999px;height:.4rem;overflow:hidden;"><span style="display:block;height:100%;border-radius:inherit;background:{{ f.barColor }};width:{{ f.width }};"></span></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <p style="margin:0;padding-top:.4rem;border-top:1px solid #eef2f0;color:#52605d;font-size:.9rem;line-height:1.55;">Most code paths are covered and PRs are gated, but a required <strong>manual regression pass</strong> and two non-automated pipeline stages keep you short of continuous delivery. Automate release smoke checks to cross 80.</p>
+            </article>
+
+            <!-- Test pyramid -->
+            <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.35rem 1.5rem;display:grid;gap:1.2rem;">
+              <div>
+                <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">Test pyramid</span>
+                <h2 style="margin:.3rem 0 0;font-size:1.25rem;font-weight:600;">Unit / Integration / E2E balance</h2>
+              </div>
+              <div style="display:grid;gap:.7rem;">
+                <sc-for list="{{ pyramid }}" as="p" hint-placeholder-count="3">
+                  <div style="display:grid;gap:.3rem;justify-items:center;">
+                    <div style="width:{{ p.width }};min-width:8rem;background:{{ p.color }};border-radius:8px;padding:.6rem .9rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;color:#fff;">
+                      <span style="font-weight:600;font-size:.9rem;">{{ p.tier }}</span>
+                      <span class="mono" style="font-size:.9rem;">{{ p.count }} · {{ p.share }}</span>
+                    </div>
+                    <span class="mono" style="font-size:.66rem;color:#a4b0ab;">{{ p.ideal }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <p style="margin:0;padding-top:.4rem;border-top:1px solid #eef2f0;color:#52605d;font-size:.9rem;line-height:1.55;"><span class="mono" style="color:#8a6318;">Slightly top-heavy.</span> E2E is 4pts above target and unit is 8pts below. Push a few browser-level assertions down into faster unit or integration tests.</p>
+            </article>
+          </section>
+
+          <!-- User flow coverage -->
+          <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.4rem 1.5rem;display:grid;gap:1.1rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+              <div>
+                <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">User flows</span>
+                <h2 style="margin:.3rem 0 0;font-size:1.25rem;font-weight:600;">Flow coverage</h2>
+                <p style="margin:.4rem 0 0;color:#64736e;font-size:.9rem;max-width:40rem;">Define the journeys that matter. Titles and assertions are scanned to detect which flows your tests actually exercise.</p>
+              </div>
+              <button style="min-height:2.5rem;padding:.55rem 1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#fff;border:1px dashed #b7c3bd;color:#0e5a62;">+ Add flow</button>
+            </div>
+            <div style="display:grid;gap:.7rem;">
+              <sc-for list="{{ flows }}" as="fl" hint-placeholder-count="5">
+                <div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:1rem;align-items:center;border:1px solid #eef2f0;border-radius:11px;padding:.85rem 1rem;">
+                  <sc-if value="{{ fl.isCovered }}" hint-placeholder-val="{{ true }}"><span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:8px;background:#e2f1ec;color:#16694f;">✓</span></sc-if>
+                  <sc-if value="{{ fl.isPartial }}" hint-placeholder-val="{{ false }}"><span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:8px;background:#f7ecd6;color:#8a6318;">~</span></sc-if>
+                  <sc-if value="{{ fl.isNone }}" hint-placeholder-val="{{ false }}"><span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:8px;background:#f6e2db;color:#93341f;">✕</span></sc-if>
+                  <div style="min-width:0;">
+                    <div style="font-weight:600;font-size:.95rem;">{{ fl.name }}</div>
+                    <div style="font-size:.82rem;color:#8c9a95;">{{ fl.note }}</div>
+                  </div>
+                  <span class="mono" style="font-size:.82rem;color:#64736e;white-space:nowrap;">{{ fl.testsLabel }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </article>
+
+          <!-- Test quality principles -->
+          <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.4rem 1.5rem;display:grid;gap:1.1rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+              <div>
+                <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">Test quality</span>
+                <h2 style="margin:.3rem 0 0;font-size:1.25rem;font-weight:600;">Principles by feature</h2>
+                <p style="margin:.4rem 0 0;color:#64736e;font-size:.9rem;max-width:42rem;">Whether each feature carries the tests good coverage implies — not just a happy path, but edge cases, error handling, security, and accessibility.</p>
+              </div>
+              <div style="display:flex;gap:.9rem;flex-wrap:wrap;">
+                <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:#33433f;"><span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:1.3rem;height:1.3rem;border-radius:5px;background:#e2f1ec;color:#16694f;">✓</span>Covered</span>
+                <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:#33433f;"><span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:1.3rem;height:1.3rem;border-radius:5px;background:#f7ecd6;color:#8a6318;">~</span>Partial</span>
+                <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:#33433f;"><span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:1.3rem;height:1.3rem;border-radius:5px;background:#f6e2db;color:#93341f;">✕</span>Gap</span>
+              </div>
+            </div>
+            <div style="overflow-x:auto;">
+              <div style="min-width:560px;display:grid;gap:.5rem;">
+                <div style="display:grid;grid-template-columns:1.5fr repeat(5,1fr);gap:.5rem;align-items:center;">
+                  <span class="mono" style="font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:#a4b0ab;">Feature</span>
+                  <sc-for list="{{ principleCols }}" as="col" hint-placeholder-count="5">
+                    <span class="mono" style="font-size:.64rem;letter-spacing:.06em;text-transform:uppercase;color:#a4b0ab;text-align:center;">{{ col }}</span>
+                  </sc-for>
+                </div>
+                <sc-for list="{{ principleRows }}" as="row" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:1.5fr repeat(5,1fr);gap:.5rem;align-items:center;border-top:1px solid #eef2f0;padding-top:.5rem;">
+                    <span style="font-weight:600;font-size:.9rem;">{{ row.feature }}</span>
+                    <sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="5">
+                      <div style="display:flex;justify-content:center;">
+                        <span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:8px;font-size:.85rem;background:{{ cell.bg }};color:{{ cell.fg }};">{{ cell.sym }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <p style="margin:0;padding-top:.4rem;border-top:1px solid #eef2f0;color:#52605d;font-size:.9rem;line-height:1.55;">Biggest gaps: <strong>security</strong> testing exists only for Authentication, and <strong>accessibility</strong> is unchecked everywhere. Teams also lacks edge-case coverage.</p>
+          </article>
+        </main>
+      </sc-if>
+
+      <!-- INTEGRATIONS -->
+      <sc-if value="{{ isIntegrations }}" hint-placeholder-val="{{ false }}">
+        <main style="padding:clamp(1.25rem,3.5vw,2.5rem);display:grid;gap:1.75rem;max-width:1180px;">
+          <header>
+            <span class="mono" style="font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:#0e5a62;">Connect</span>
+            <h1 style="margin:.4rem 0 .5rem;font-size:2.4rem;letter-spacing:-.025em;font-weight:600;">Integrations</h1>
+            <p style="margin:0;color:#64736e;max-width:46rem;">Bring in your pipeline and repository so goals, metrics, and insights reflect live signals instead of sample data.</p>
+          </header>
+
+          <section style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <!-- Azure DevOps (connected) -->
+            <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.4rem 1.5rem;display:grid;gap:1.1rem;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;">
+                <div style="display:flex;align-items:center;gap:.8rem;">
+                  <span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:2.6rem;height:2.6rem;border-radius:10px;background:#0e5a62;color:#fff;font-weight:600;">AZ</span>
+                  <div><div style="font-weight:600;font-size:1.05rem;">Azure DevOps</div><div style="font-size:.82rem;color:#8c9a95;">Test results &amp; coverage</div></div>
+                </div>
+                <span class="mono" style="font-size:.72rem;font-weight:500;padding:.28rem .65rem;border-radius:999px;background:#e2f1ec;color:#16694f;">● Connected</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.9rem;border-top:1px solid #eef2f0;padding-top:1rem;">
+                <div><div class="mono" style="font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:#a4b0ab;">Organization</div><div class="mono" style="font-size:.92rem;margin-top:.2rem;">acme-eng</div></div>
+                <div><div class="mono" style="font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:#a4b0ab;">Project</div><div class="mono" style="font-size:.92rem;margin-top:.2rem;">qa-platform</div></div>
+                <div><div class="mono" style="font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:#a4b0ab;">Pipeline</div><div class="mono" style="font-size:.92rem;margin-top:.2rem;">qa-platform-ci</div></div>
+                <div><div class="mono" style="font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:#a4b0ab;">Last sync</div><div class="mono" style="font-size:.92rem;margin-top:.2rem;color:#16694f;">8 min ago</div></div>
+              </div>
+              <div style="display:flex;gap:.6rem;justify-content:flex-end;border-top:1px solid #eef2f0;padding-top:1rem;">
+                <button style="min-height:2.5rem;padding:.55rem 1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#fff;border:1px solid #d5ddd8;color:#10201f;">Reconfigure</button>
+                <button style="min-height:2.5rem;padding:.55rem 1.1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#0e5a62;border:1px solid #0e5a62;color:#fff;">Sync now</button>
+              </div>
+            </article>
+
+            <!-- GitHub (connect) -->
+            <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.4rem 1.5rem;display:grid;gap:1.1rem;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;">
+                <div style="display:flex;align-items:center;gap:.8rem;">
+                  <span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:2.6rem;height:2.6rem;border-radius:10px;background:#10201f;color:#fff;font-weight:600;">GH</span>
+                  <div><div style="font-weight:600;font-size:1.05rem;">GitHub</div><div style="font-size:.82rem;color:#8c9a95;">Code surface &amp; PR checks</div></div>
+                </div>
+                <span class="mono" style="font-size:.72rem;font-weight:500;padding:.28rem .65rem;border-radius:999px;background:#eef1f0;color:#64736e;">Not connected</span>
+              </div>
+              <div style="display:grid;gap:.8rem;border-top:1px solid #eef2f0;padding-top:1rem;">
+                <label style="display:grid;gap:.35rem;font-weight:600;font-size:.85rem;color:#33433f;">Repository URL<input placeholder="github.com/acme/qa-dashboard" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.6rem;padding:.6rem .8rem;width:100%;"></label>
+                <label style="display:grid;gap:.35rem;font-weight:600;font-size:.85rem;color:#33433f;">Default branch<input value="main" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.6rem;padding:.6rem .8rem;width:100%;"></label>
+                <span style="font-size:.8rem;color:#8c9a95;">A read-only access token is stored server-side. Powers CI/CD readiness and code-surface coverage on Insights.</span>
+              </div>
+              <div style="display:flex;justify-content:flex-end;border-top:1px solid #eef2f0;padding-top:1rem;">
+                <button style="min-height:2.5rem;padding:.55rem 1.2rem;border-radius:9px;font-weight:600;cursor:pointer;background:#10201f;border:1px solid #10201f;color:#fff;">Connect repository</button>
+              </div>
+            </article>
+          </section>
+
+          <section style="display:grid;gap:.7rem;">
+            <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#8c9a95;">More sources</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+              <div style="background:#f6f8f6;border:1px dashed #cdd7d1;border-radius:12px;padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+                <div style="display:flex;align-items:center;gap:.8rem;"><span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:2.3rem;height:2.3rem;border-radius:9px;background:#e4e9e5;color:#64736e;font-weight:600;">JK</span><span style="font-weight:600;color:#52605d;">Jenkins</span></div>
+                <span class="mono" style="font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:#a4b0ab;">Coming soon</span>
+              </div>
+              <div style="background:#f6f8f6;border:1px dashed #cdd7d1;border-radius:12px;padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+                <div style="display:flex;align-items:center;gap:.8rem;"><span class="mono" style="display:inline-flex;align-items:center;justify-content:center;width:2.3rem;height:2.3rem;border-radius:9px;background:#e4e9e5;color:#64736e;font-weight:600;">JR</span><span style="font-weight:600;color:#52605d;">Jira</span></div>
+                <span class="mono" style="font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:#a4b0ab;">Coming soon</span>
+              </div>
+            </div>
+          </section>
+
+          <article style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.4rem 1.5rem;display:grid;gap:1rem;">
+            <div>
+              <span class="mono" style="font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:#64736e;">Category mapping</span>
+              <h2 style="margin:.3rem 0 0;font-size:1.25rem;font-weight:600;">How pipeline runs map to Unit / API / UI</h2>
+              <p style="margin:.4rem 0 0;color:#64736e;font-size:.9rem;">A run is categorised when its title contains any of these words. Adjust to match your naming.</p>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;">
+              <label style="display:grid;gap:.35rem;font-weight:600;font-size:.85rem;color:#33433f;">Unit run title includes<input value="unit" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.6rem;padding:.6rem .8rem;width:100%;"></label>
+              <label style="display:grid;gap:.35rem;font-weight:600;font-size:.85rem;color:#33433f;">API run title includes<input value="api" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.6rem;padding:.6rem .8rem;width:100%;"></label>
+              <label style="display:grid;gap:.35rem;font-weight:600;font-size:.85rem;color:#33433f;">UI run title includes<input value="ui" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.6rem;padding:.6rem .8rem;width:100%;"></label>
+            </div>
+            <div style="display:flex;justify-content:flex-end;border-top:1px solid #eef2f0;padding-top:1rem;">
+              <button style="min-height:2.5rem;padding:.55rem 1.2rem;border-radius:9px;font-weight:600;cursor:pointer;background:#0e5a62;border:1px solid #0e5a62;color:#fff;">Save mapping</button>
+            </div>
+          </article>
+        </main>
+      </sc-if>
+
+      <!-- CREATE GOAL -->
+      <sc-if value="{{ isCreateGoal }}" hint-placeholder-val="{{ false }}">
+        <main style="padding:clamp(1.25rem,3.5vw,2.5rem);display:grid;gap:1.5rem;max-width:820px;">
+          <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;">
+            <div>
+              <span class="mono" style="font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:#0e5a62;">Goal tracking</span>
+              <h1 style="margin:.4rem 0 .5rem;font-size:2.4rem;letter-spacing:-.025em;font-weight:600;">Create goal</h1>
+              <p style="margin:0;color:#64736e;">Add a team goal or an individual goal that supports the current board.</p>
+            </div>
+            <button onClick="{{ goDashboard }}" style="min-height:2.6rem;padding:.6rem 1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#fff;border:1px solid #d5ddd8;color:#10201f;">Back</button>
+          </header>
+          <form style="background:#fff;border:1px solid #e0e6e2;border-radius:14px;padding:1.5rem;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.1rem;">
+            <label style="grid-column:1 / -1;display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Title<input style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"></label>
+            <label style="grid-column:1 / -1;display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Description<textarea style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:6rem;padding:.65rem .8rem;width:100%;resize:vertical;"></textarea></label>
+            <label style="display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Scope<select style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"><option>Team goal</option><option>Individual goal</option></select></label>
+            <label style="display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Owner<select style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"><option>Sam Rivera</option><option>Jordan Lee</option><option>Mia Chen</option></select></label>
+            <label style="display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Metric type<select style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"><option>Test coverage</option><option>Tests passing</option></select></label>
+            <label style="display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Test category<select style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"><option>Unit</option><option>API</option><option>UI</option></select></label>
+            <label style="display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Current value<input value="0" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"></label>
+            <label style="display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Target value<input value="100" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"></label>
+            <label style="display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Unit<input value="%" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"></label>
+            <label style="display:grid;gap:.4rem;font-weight:600;font-size:.9rem;color:#33433f;">Due date<input type="date" style="background:#f7f9f8;border:1px solid #d7ded9;border-radius:9px;min-height:2.75rem;padding:.65rem .8rem;width:100%;"></label>
+            <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;gap:.7rem;border-top:1px solid #eef2f0;padding-top:1.1rem;">
+              <button type="button" onClick="{{ goDashboard }}" style="min-height:2.7rem;padding:.65rem 1.1rem;border-radius:9px;font-weight:600;cursor:pointer;background:#fff;border:1px solid #d5ddd8;color:#10201f;">Cancel</button>
+              <button type="button" onClick="{{ goDashboard }}" style="min-height:2.7rem;padding:.65rem 1.3rem;border-radius:9px;font-weight:600;cursor:pointer;background:#0e5a62;border:1px solid #0e5a62;color:#fff;">Save goal</button>
+            </div>
+          </form>
+        </main>
+      </sc-if>
+    </div>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { screen: "dashboard" };
+
+  renderVals() {
+    const set = (screen) => () => this.setState({ screen });
+    const isSignUp = this.state.screen === "signup";
+
+    // ---- chart helpers ----
+    const mkPts = (vals, minV, maxV, W, H, padL, padR, padT, padB) => {
+      const n = vals.length;
+      const x = (i) => padL + (i / (n - 1)) * (W - padL - padR);
+      const y = (v) => padT + (1 - (v - minV) / (maxV - minV)) * (H - padT - padB);
+      return vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    };
+    const mkArea = (vals, minV, maxV, W, H, padL, padR, padT, padB) => {
+      const n = vals.length;
+      const x = (i) => padL + (i / (n - 1)) * (W - padL - padR);
+      const y = (v) => padT + (1 - (v - minV) / (maxV - minV)) * (H - padT - padB);
+      const base = (H - padB).toFixed(1);
+      let d = `M ${x(0).toFixed(1)},${base} `;
+      vals.forEach((v, i) => { d += `L ${x(i).toFixed(1)},${y(v).toFixed(1)} `; });
+      d += `L ${x(n - 1).toFixed(1)},${base} Z`;
+      return d;
+    };
+    const yAt = (v, minV, maxV, H, padT, padB) => (padT + (1 - (v - minV) / (maxV - minV)) * (H - padT - padB)).toFixed(1);
+
+    // ---- data ----
+    const unit = [71, 73, 74, 76, 78, 79, 81, 82];
+    const api  = [66, 68, 69, 70, 71, 72, 73, 74];
+    const ui   = [52, 54, 55, 57, 58, 59, 60, 61];
+    const pass = [89, 91, 90, 92, 93, 94, 95, 96];
+    const covAvg = unit.map((v, i) => Math.round((v + api[i] + ui[i]) / 3));
+
+    // dashboard charts (640x220 cov, 640x200 pass); left axis pad 34
+    const covUnitPts = mkPts(unit, 40, 100, 640, 220, 34, 12, 16, 28);
+    const covApiPts  = mkPts(api, 40, 100, 640, 220, 34, 12, 16, 28);
+    const covUiPts   = mkPts(ui, 40, 100, 640, 220, 34, 12, 16, 28);
+    const passPts    = mkPts(pass, 80, 100, 640, 200, 34, 12, 16, 28);
+    const passArea   = mkArea(pass, 80, 100, 640, 200, 34, 12, 16, 28);
+
+    // large test-results chart (960x300)
+    const covUnitPtsL = mkPts(unit, 40, 100, 960, 300, 34, 16, 24, 33);
+    const covApiPtsL  = mkPts(api, 40, 100, 960, 300, 34, 16, 24, 33);
+    const covUiPtsL   = mkPts(ui, 40, 100, 960, 300, 34, 16, 24, 33);
+
+    // sparklines
+    const spark = (vals) => {
+      const mn = Math.min(...vals) - 1, mx = Math.max(...vals) + 1;
+      return mkPts(vals, mn, mx, 120, 44, 3, 3, 6, 6);
+    };
+    const spark34 = (vals) => {
+      const mn = Math.min(...vals) - 1, mx = Math.max(...vals) + 1;
+      return mkPts(vals, mn, mx, 120, 34, 3, 3, 4, 4);
+    };
+    const landingSpark = (() => {
+      const mn = Math.min(...pass) - 1, mx = Math.max(...pass) + 1;
+      return mkPts(pass, mn, mx, 320, 90, 4, 4, 8, 8);
+    })();
+
+    const enrich = (g) => ({
+      ...g,
+      isActive: g.status === "active",
+      isCompleted: g.status === "completed",
+      isAtRisk: g.status === "at-risk",
+      width: g.percent + "%",
+      percentLabel: g.percent + "%",
+      barColor: g.status === "at-risk" ? "#b1482f" : g.status === "completed" ? "#1a8a7a" : "#0e5a62",
+    });
+
+    const teamGoals = [
+      { title: "Reach 90% unit test coverage", description: "Improve unit coverage for core dashboard logic.", owner: "Sam Rivera", initials: "SR", metric: "Test coverage", cat: "Unit", current: "82", target: "90", unit: "%", percent: 91, status: "active",
+        children: [{ title: "Test progress utility edge cases", owner: "Sam Rivera", percent: 75, status: "active" }] },
+      { title: "Keep API tests passing", description: "Maintain passing API coverage for backend-facing behavior.", owner: "Jordan Lee", initials: "JL", metric: "Tests passing", cat: "API", current: "1", target: "1", unit: "", percent: 100, status: "completed",
+        children: [{ title: "Add API test fixtures", owner: "Jordan Lee", percent: 100, status: "completed" }] },
+      { title: "Raise UI test coverage to 75%", description: "Improve browser-level confidence for primary dashboard flows.", owner: "Mia Chen", initials: "MC", metric: "Test coverage", cat: "UI", current: "61", target: "75", unit: "%", percent: 81, status: "at-risk",
+        children: [{ title: "Create dashboard Playwright smoke test", owner: "Mia Chen", percent: 0, status: "at-risk" }] },
+    ].map((g) => ({ ...enrich(g), children: g.children.map(enrich) }));
+
+    const metricCards = [
+      { heading: "Unit tests", passing: true, failing: false, coverage: "82", color: "#0e5a62", spark: spark(unit) },
+      { heading: "API tests", passing: true, failing: false, coverage: "74", color: "#c69a43", spark: spark(api) },
+      { heading: "UI tests", passing: false, failing: true, coverage: "61", color: "#b1482f", spark: spark(ui) },
+    ];
+
+    // ---- flaky / most-failing tests ----
+    const failCell = (f) => ({ fail: !!f, bg: f ? "#b1482f" : "#cfe0da" });
+    const hist = (arr) => arr.map(failCell);
+    const flakyTests = [
+      { name: "renders dashboard metric summary", suite: "UI · Playwright", rate: "34%", flaky: true, last: "2h ago", runs: hist([0,1,0,1,1,0,1,0,1,1]) },
+      { name: "joinTeam rejects expired code", suite: "API · contract", rate: "21%", flaky: true, last: "1d ago", runs: hist([0,0,1,0,0,1,0,1,0,0]) },
+      { name: "progressPercent handles zero target", suite: "Unit", rate: "12%", flaky: false, last: "3d ago", runs: hist([0,0,0,1,0,0,0,0,1,0]) },
+      { name: "AuthContext refreshes on 401", suite: "Unit", rate: "9%", flaky: false, last: "5d ago", runs: hist([0,0,0,0,0,1,0,0,0,0]) },
+      { name: "create goal validates target > current", suite: "API", rate: "6%", flaky: false, last: "6d ago", runs: hist([0,0,0,0,0,0,0,1,0,0]) },
+    ];
+
+    // ---- CI/CD readiness ----
+    const cicdScore = 68;
+    const RC = 2 * Math.PI * 52;
+    const cicdDash = `${(cicdScore / 100 * RC).toFixed(1)} ${RC.toFixed(1)}`;
+    const cicdFactors = [
+      { label: "Automated coverage of code surface", val: "72%", pct: 72, tone: "ok" },
+      { label: "PRs gated by passing checks", val: "84%", pct: 84, tone: "ok" },
+      { label: "Pipeline stages automated", val: "3 / 5", pct: 60, tone: "warn" },
+      { label: "Tests block a deploy within", val: "6 min", pct: 80, tone: "ok" },
+      { label: "Manual regression still required", val: "Yes", pct: 35, tone: "gap" },
+    ].map((f) => ({ ...f, width: f.pct + "%", barColor: f.tone === "gap" ? "#b1482f" : f.tone === "warn" ? "#c69a43" : "#1a8a7a" }));
+
+    // ---- test pyramid ----
+    const pyramid = [
+      { tier: "E2E", count: 105, share: "14%", width: "26%", ideal: "target 10%", color: "#b1482f" },
+      { tier: "Integration", count: 190, share: "24%", width: "48%", ideal: "target 20%", color: "#c69a43" },
+      { tier: "Unit", count: 480, share: "62%", width: "100%", ideal: "target 70%", color: "#0e5a62" },
+    ];
+
+    // ---- user flow coverage ----
+    const flows = [
+      { name: "Sign up → Join team → Dashboard", tests: 5, status: "covered", note: "All steps exercised end-to-end." },
+      { name: "Create a goal", tests: 2, status: "partial", note: "Happy path only — validation edge cases not detected." },
+      { name: "Refresh Azure metrics", tests: 3, status: "covered", note: "Config, refresh, and render all covered." },
+      { name: "Switch team", tests: 0, status: "none", note: "No tests detected for this flow." },
+      { name: "Sign out", tests: 1, status: "covered", note: "Session clear verified." },
+    ].map((f) => ({ ...f,
+      isCovered: f.status === "covered", isPartial: f.status === "partial", isNone: f.status === "none",
+      testsLabel: f.tests + (f.tests === 1 ? " test" : " tests"),
+    }));
+
+    // ---- test quality principles ----
+    const principleCols = ["Happy path", "Edge cases", "Errors", "Security", "A11y"];
+    const dotFors = (s) => ({ good: { bg: "#e2f1ec", fg: "#16694f", sym: "✓" }, warn: { bg: "#f7ecd6", fg: "#8a6318", sym: "~" }, gap: { bg: "#f6e2db", fg: "#93341f", sym: "✕" } }[s]);
+    const prow = (feature, arr) => ({ feature, cells: arr.map(dotFors) });
+    const principleRows = [
+      prow("Authentication", ["good", "warn", "good", "warn", "gap"]),
+      prow("Goals", ["good", "warn", "good", "gap", "gap"]),
+      prow("Metrics", ["good", "good", "warn", "gap", "gap"]),
+      prow("Teams", ["good", "gap", "warn", "gap", "gap"]),
+    ];
+
+    const navBase = { display: "flex", alignItems: "center", gap: ".65rem", borderRadius: "9px", color: "#93a6a1", fontWeight: 600, fontSize: ".92rem", padding: ".65rem .7rem", cursor: "pointer" };
+    const navActive = { ...navBase, background: "#16383a", color: "#eef2f0" };
+    const dotBase = { width: "6px", height: "6px", borderRadius: "50%", background: "transparent" };
+    const dotActive = { ...dotBase, background: "#c69a43" };
+    const navFor = (s) => (this.state.screen === s ? navActive : navBase);
+    const dotFor = (s) => (this.state.screen === s ? dotActive : dotBase);
+
+    return {
+      showLanding: this.state.screen === "landing",
+      showAuth: this.state.screen === "signin" || this.state.screen === "signup",
+      showApp: ["dashboard", "insights", "testresults", "integrations", "creategoal"].includes(this.state.screen),
+      isDashboard: this.state.screen === "dashboard",
+      isInsights: this.state.screen === "insights",
+      isTestResults: this.state.screen === "testresults",
+      isIntegrations: this.state.screen === "integrations",
+      isCreateGoal: this.state.screen === "creategoal",
+      isSignUp,
+      authEyebrow: isSignUp ? "Create account" : "Welcome back",
+      authTitle: isSignUp ? "Sign up" : "Sign in",
+      authSubtitle: isSignUp ? "Create an account, then join your team from the dashboard." : "Use your team account to open the protected dashboard.",
+      authButton: isSignUp ? "Create account" : "Sign in",
+      authSwitchText: isSignUp ? "Already have an account?" : "Need an account?",
+      authSwitchLink: isSignUp ? "Sign in" : "Sign up",
+      onAuthSubmit: (e) => { e.preventDefault(); this.setState({ screen: "dashboard" }); },
+      toggleAuth: () => this.setState({ screen: isSignUp ? "signin" : "signup" }),
+      navDashStyle: navFor("dashboard"), navInsightsStyle: navFor("insights"), navTestStyle: navFor("testresults"), navIntegStyle: navFor("integrations"), navGoalStyle: navFor("creategoal"),
+      navDashDot: dotFor("dashboard"), navInsightsDot: dotFor("insights"), navTestDot: dotFor("testresults"), navIntegDot: dotFor("integrations"), navGoalDot: dotFor("creategoal"),
+      covUnitPts, covApiPts, covUiPts, passPts, passArea,
+      covUnitPtsL, covApiPtsL, covUiPtsL,
+      covUnitEndY: yAt(82, 40, 100, 220, 16, 28),
+      covApiEndY: yAt(74, 40, 100, 220, 16, 28),
+      covUiEndY: yAt(61, 40, 100, 220, 16, 28),
+      passEndY: yAt(96, 80, 100, 200, 16, 28),
+      passSpark: spark34(pass), covSpark: spark34(covAvg), landingSpark,
+      metricCards, teamGoals,
+      flakyTests, cicdScore, cicdDash, cicdFactors, pyramid, flows, principleCols, principleRows,
+      goLanding: set("landing"), goSignIn: set("signin"), goSignUp: set("signup"),
+      goDashboard: set("dashboard"), goInsights: set("insights"), goTestResults: set("testresults"), goIntegrations: set("integrations"), goCreateGoal: set("creategoal"),
+    };
+  }
+}
+</script>
+</body>
+</html>
