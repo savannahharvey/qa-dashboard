@@ -44,10 +44,7 @@ export function IntegrationsPage() {
           <div>
             <span className="eyebrow">Connect</span>
             <h1>Integrations</h1>
-            <p className="muted">
-              Bring in your pipeline and repository so goals, metrics, and insights reflect live signals instead of
-              sample data.
-            </p>
+            <p className="muted">Bring in your pipeline and repository so goals, metrics, and insights reflect live signals.</p>
           </div>
         </header>
 

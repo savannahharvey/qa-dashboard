@@ -18,7 +18,6 @@ const metricStatusMap: Record<MetricStatus, string> = {
 };
 
 const metricSourceMap: Record<MetricSource, string> = {
-  SAMPLE: "sample",
   MANUAL: "manual",
   AZURE_DEVOPS: "azure-devops",
 };

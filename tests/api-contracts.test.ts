@@ -209,9 +209,9 @@ describe("dashboard read API scenarios", () => {
     });
     expect(response.body.testSuites).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: "suite-api", category: "api", enabled: true, source: "sample" }),
-        expect.objectContaining({ id: "suite-ui", category: "ui", enabled: true, source: "sample" }),
-        expect.objectContaining({ id: "suite-unit", category: "unit", enabled: true, source: "sample" }),
+        expect.objectContaining({ id: "suite-api", category: "api", enabled: true, source: "manual" }),
+        expect.objectContaining({ id: "suite-ui", category: "ui", enabled: true, source: "manual" }),
+        expect.objectContaining({ id: "suite-unit", category: "unit", enabled: true, source: "manual" }),
       ]),
     );
     expect(response.body.metrics).toEqual(
@@ -494,7 +494,7 @@ function seedDashboardFixture() {
   ];
 
   for (const [id, category, name] of testSuites) {
-    inMemory.createTestSuite({ id, teamId: "team-qa", category, name, source: "SAMPLE", enabled: true, createdAt: now, updatedAt: now });
+    inMemory.createTestSuite({ id, teamId: "team-qa", category, name, source: "MANUAL", enabled: true, createdAt: now, updatedAt: now });
   }
 
   const metrics = [
@@ -507,7 +507,7 @@ function seedDashboardFixture() {
   ];
 
   for (const [id, testSuiteId, category, kind, status, value, unit] of metrics) {
-    inMemory.createMetric({ id, teamId: "team-qa", testSuiteId, category, kind, status, value, unit, source: "SAMPLE", createdAt: now, updatedAt: now });
+    inMemory.createMetric({ id, teamId: "team-qa", testSuiteId, category, kind, status, value, unit, source: "MANUAL", createdAt: now, updatedAt: now });
   }
 
   const goals = [

@@ -5,10 +5,8 @@ import { AppShell } from "../components/AppShell";
 import { GoalCard } from "../components/GoalCard";
 import { CategoryMetricsRow, type CategoryCardData } from "../components/CategoryMetricsRow";
 import { AreaChart } from "../components/charts/AreaChart";
-import { LineChart } from "../components/charts/LineChart";
 import { Sparkline } from "../components/charts/Sparkline";
 import { deriveKpis, groupGoals } from "../domain/display";
-import { sampleCategorySparklines, sampleCoverageTrend, sampleCoverageTrendLabels } from "../domain/sampleInsights";
 import { useAuth } from "../state/AuthContext";
 import type { Dashboard } from "../types";
 
@@ -216,38 +214,11 @@ function ChartsRow({ passRatePoints }: { passRatePoints: number[] }) {
   return (
     <section className="charts-grid">
       <article className="chart-card">
-        <div className="chart-card-header">
-          <div>
-            <span className="eyebrow">Coverage over time</span>
-            <h2>Test coverage · last 8 weeks</h2>
-          </div>
-          <div className="chart-legend">
-            <span>
-              <span className="chart-swatch" style={{ background: "#0e5a62" }} />
-              Unit
-            </span>
-            <span>
-              <span className="chart-swatch" style={{ background: "#c69a43" }} />
-              API
-            </span>
-            <span>
-              <span className="chart-swatch" style={{ background: "#b1482f" }} />
-              UI
-            </span>
-          </div>
+        <div>
+          <span className="eyebrow">Coverage over time</span>
+          <h2>Test coverage · last 8 weeks</h2>
         </div>
-        <span className="sample-tag">SAMPLE SOURCE</span>
-        <LineChart
-          min={40}
-          max={100}
-          yTicks={[100, 80, 60, 40]}
-          xLabels={sampleCoverageTrendLabels}
-          series={[
-            { label: "Unit", color: "#0e5a62", values: sampleCoverageTrend.unit },
-            { label: "API", color: "#c69a43", values: sampleCoverageTrend.api },
-            { label: "UI", color: "#b1482f", values: sampleCoverageTrend.ui },
-          ]}
-        />
+        <p className="muted">Not enough history yet to chart a trend.</p>
       </article>
 
       <article className="chart-card">
@@ -288,7 +259,7 @@ function TeamBoard({ dashboard }: { dashboard: Dashboard }) {
       (["unit", "api", "ui"] as const).map((category) => ({
         category,
         metrics: dashboard.metrics.filter((metric) => metric.category === category),
-        sparkline: sampleCategorySparklines[category],
+        sparkline: [],
       })),
     [dashboard.metrics],
   );
@@ -303,7 +274,6 @@ function TeamBoard({ dashboard }: { dashboard: Dashboard }) {
       <section className="board-section">
         <div className="section-title">
           <h2>By category</h2>
-          <span className="sample-tag">SAMPLE SOURCE</span>
         </div>
         <CategoryMetricsRow cards={categoryCards} />
       </section>

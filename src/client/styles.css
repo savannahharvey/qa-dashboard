@@ -764,13 +764,6 @@ textarea:focus {
   font-size: 0.68rem;
 }
 
-.sample-tag {
-  color: var(--muted-soft);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-}
-
 /* ---------- Category metrics ---------- */
 
 .metrics-grid {

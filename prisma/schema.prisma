@@ -46,7 +46,7 @@ model TestSuite {
   teamId    String
   category  String
   name      String
-  source    String     @default("SAMPLE")
+  source    String     @default("MANUAL")
   enabled   Boolean    @default(true)
   createdAt DateTime   @default(now())
   updatedAt DateTime

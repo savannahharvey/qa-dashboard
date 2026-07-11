@@ -33,7 +33,7 @@ CREATE TABLE "TestSuite" (
     "teamId" TEXT NOT NULL,
     "category" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "source" TEXT NOT NULL DEFAULT 'SAMPLE',
+    "source" TEXT NOT NULL DEFAULT 'MANUAL',
     "enabled" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,

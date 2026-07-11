@@ -17,7 +17,7 @@ Current specs:
 
 Preparation specs:
 
-- `000-implementation-readiness`: agreed stack, sample data, testing tools, and implementation order.
+- `000-implementation-readiness`: agreed stack, testing tools, and implementation order.
 
 UI/page specs:
 
@@ -38,10 +38,9 @@ Domain/data specs:
 Current implementation direction:
 
 - React, TypeScript, Vite, plain CSS, Vitest, and Playwright.
--- Backend foundation: Node.js, Express, TypeScript, PostgreSQL on AWS RDS, and SQL migrations.
+-- Backend foundation: Node.js, Express, TypeScript, PostgreSQL, and SQL migrations.
 - Figma-guided screens for landing, sign-in, sign-up, dashboard, team board, and create goal.
-- Sample data is defined in `docs/sample-data.md`.
-- Azure DevOps is the planned first automated source for QA metrics after the sample dashboard is stable.
+- New teams start with zero goals, metrics, and insights — everything is populated by real user activity or a connected Azure DevOps source.
 
 ## Local Setup
 
@@ -74,10 +73,10 @@ Useful scripts:
 Useful endpoints:
 
 - `GET /health`
-- `GET /api/teams/team-qa/dashboard`
-- `GET /api/teams/team-qa/test-suites`
-- `GET /api/teams/team-qa/metrics`
-- `GET /api/teams/team-qa/goals`
+- `GET /api/teams/:teamId/dashboard`
+- `GET /api/teams/:teamId/test-suites`
+- `GET /api/teams/:teamId/metrics`
+- `GET /api/teams/:teamId/goals`
 
 Set `DATABASE_URL` to a PostgreSQL connection string from your current Terraform/Secrets Manager credentials. For the local tunnel, use the forwarded localhost port without forcing SSL:
 
@@ -87,7 +86,7 @@ DATABASE_URL=postgresql://<username>:<password>@127.0.0.1:5432/<dbname>
 
 If you need to confirm the username and password, fetch the secret named by the Terraform `secrets_arn` output and build the URL from that JSON payload.
 
-Then run `npm run db:init` to apply the PostgreSQL schema and seed the QA dashboard sample data.
+Then run `npm run db:init` to apply the PostgreSQL schema. This only creates tables (`CREATE TABLE IF NOT EXISTS`) — it does not insert any data, so a fresh database and every new team/user start completely empty. Do not point it at a shared or production `DATABASE_URL` unless you intend to (re)apply the schema there.
 
 The tunnel script uses the Terraform outputs in `infra/terraform/`:
 
@@ -100,7 +99,7 @@ db_port
 Recommended implementation order:
 
 1. Scaffold the React, TypeScript, and Vite app.
-2. Add shared sample data for users, teams, goals, and QA metrics.
+2. Model users, teams, goals, and QA metrics.
 3. Add testable progress, status, and metric utility logic.
 4. Build the read-only dashboard foundation.
 5. Add Vitest unit tests for business rules.
@@ -108,7 +107,7 @@ Recommended implementation order:
 7. Add Playwright coverage for the primary page flows.
 8. Implement auth and team membership.
 9. Implement goal creation.
-10. Replace sample metric data with Azure DevOps test result and coverage data.
+10. Add Azure DevOps test result and coverage data as a real metric source.
 
 For each feature, create a new folder under `specs/` using this pattern:
 

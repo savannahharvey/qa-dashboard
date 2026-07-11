@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS "TestSuite" (
     "teamId" TEXT NOT NULL,
     "category" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "source" TEXT NOT NULL DEFAULT 'SAMPLE',
+    "source" TEXT NOT NULL DEFAULT 'MANUAL',
     "enabled" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ NOT NULL,

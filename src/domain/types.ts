@@ -3,7 +3,7 @@ export type GoalStatus = "ACTIVE" | "COMPLETED" | "AT_RISK";
 export type TestCategory = "UNIT" | "API" | "UI";
 export type MetricKind = "TESTS_PASSING" | "TEST_COVERAGE";
 export type MetricStatus = "PASSING" | "FAILING" | "UNAVAILABLE";
-export type MetricSource = "SAMPLE" | "MANUAL" | "AZURE_DEVOPS";
+export type MetricSource = "MANUAL" | "AZURE_DEVOPS";
 
 export type User = {
   id: string;

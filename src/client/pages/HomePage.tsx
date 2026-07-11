@@ -1,7 +1,5 @@
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../state/AuthContext";
-import { Sparkline } from "../components/charts/Sparkline";
-import { sampleLandingStats } from "../domain/sampleInsights";
 
 export function HomePage() {
   const { status } = useAuth();
@@ -47,23 +45,24 @@ export function HomePage() {
         <div className="dashboard-preview" aria-label="Dashboard preview">
           <div className="preview-header">
             <span>Suite health</span>
-            <span>▲ live</span>
           </div>
           <div className="preview-grid">
             <div>
               <strong>Pass rate</strong>
-              <b>{sampleLandingStats.passRate}%</b>
+              <b>–</b>
             </div>
             <div>
               <strong>Avg coverage</strong>
-              <b>{sampleLandingStats.avgCoverage}%</b>
+              <b>–</b>
             </div>
             <div>
               <strong>At risk</strong>
-              <b>{sampleLandingStats.atRisk}</b>
+              <b>–</b>
             </div>
           </div>
-          <Sparkline data={sampleLandingStats.trend} width={320} height={90} color="#5fbf9f" />
+          <p className="muted" style={{ fontSize: "0.85rem" }}>
+            Your team's numbers show up here once you create a team and connect a test source.
+          </p>
         </div>
       </section>
     </main>
