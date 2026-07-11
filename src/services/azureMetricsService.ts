@@ -77,7 +77,14 @@ async function persistAndRespond(
 
 export async function listAzurePipelines(repository: DashboardRepository, teamId: string) {
   const diagnostics: Diagnostic[] = [];
-  const config = await repository.findMetricSourceConfig(teamId, "AZURE_DEVOPS");
+
+  let config: Awaited<ReturnType<DashboardRepository["findMetricSourceConfig"]>>;
+  try {
+    config = await repository.findMetricSourceConfig(teamId, "AZURE_DEVOPS");
+  } catch {
+    diagnostics.push({ source: "azure-devops", message: "Azure DevOps configuration could not be loaded." });
+    return { pipelines: [] as AzurePipelineDefinition[], diagnostics };
+  }
 
   if (!config || (config.enabled !== 1 && config.enabled !== true)) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps configuration is not enabled." });
