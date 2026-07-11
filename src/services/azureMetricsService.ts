@@ -25,13 +25,18 @@ const categoryApiValues = { UNIT: "unit", API: "api", UI: "ui" } as const;
 export async function refreshAzureMetrics(repository: DashboardRepository, teamId: string) {
   const refreshedAt = new Date().toISOString();
   const diagnostics: Diagnostic[] = [];
-  const config = await repository.findMetricSourceConfig(teamId, "AZURE_DEVOPS");
+
+  let config: Awaited<ReturnType<DashboardRepository["findMetricSourceConfig"]>>;
+  try {
+    config = await repository.findMetricSourceConfig(teamId, "AZURE_DEVOPS");
+  } catch {
+    diagnostics.push({ source: "azure-devops", message: "Azure DevOps configuration could not be loaded." });
+    return persistAndRespond(repository, teamId, unavailableMetrics(teamId, refreshedAt), refreshedAt, diagnostics);
+  }
 
   if (!config || (config.enabled !== 1 && config.enabled !== true)) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps configuration is not enabled." });
-    const metrics = unavailableMetrics(teamId, refreshedAt);
-    await repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
-    return formatRefreshResponse(refreshedAt, metrics, diagnostics);
+    return persistAndRespond(repository, teamId, unavailableMetrics(teamId, refreshedAt), refreshedAt, diagnostics);
   }
 
   const settings = parseSettings(config.settings);
@@ -41,21 +46,33 @@ export async function refreshAzureMetrics(repository: DashboardRepository, teamI
 
   if (!organization || !project || !token) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps organization, project, or token configuration is missing." });
-    const metrics = unavailableMetrics(teamId, refreshedAt);
-    await repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
-    return formatRefreshResponse(refreshedAt, metrics, diagnostics);
+    return persistAndRespond(repository, teamId, unavailableMetrics(teamId, refreshedAt), refreshedAt, diagnostics);
   }
 
+  let metrics: QaMetric[];
   try {
-    const metrics = await fetchAzureMetrics(teamId, refreshedAt, organization, project, token, settings);
-    await repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
-    return formatRefreshResponse(refreshedAt, metrics, diagnostics);
+    metrics = await fetchAzureMetrics(teamId, refreshedAt, organization, project, token, settings);
   } catch {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps metrics could not be refreshed." });
-    const metrics = unavailableMetrics(teamId, refreshedAt);
-    await repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
-    return formatRefreshResponse(refreshedAt, metrics, diagnostics);
+    metrics = unavailableMetrics(teamId, refreshedAt);
   }
+
+  return persistAndRespond(repository, teamId, metrics, refreshedAt, diagnostics);
+}
+
+async function persistAndRespond(
+  repository: DashboardRepository,
+  teamId: string,
+  metrics: QaMetric[],
+  refreshedAt: string,
+  diagnostics: Diagnostic[],
+) {
+  try {
+    await repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
+  } catch {
+    diagnostics.push({ source: "azure-devops", message: "Refreshed metrics could not be saved." });
+  }
+  return formatRefreshResponse(refreshedAt, metrics, diagnostics);
 }
 
 export async function listAzurePipelines(repository: DashboardRepository, teamId: string) {
