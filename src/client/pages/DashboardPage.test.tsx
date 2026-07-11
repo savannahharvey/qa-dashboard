@@ -78,7 +78,7 @@ describe("DashboardPage", () => {
     const user = userEvent.setup();
     useAuthMock.mockReturnValue(authWithTeam());
     vi.mocked(getDashboard).mockResolvedValueOnce(dashboardFixture()).mockResolvedValueOnce(updatedDashboardFixture());
-    vi.mocked(refreshMetrics).mockResolvedValueOnce(undefined);
+    vi.mocked(refreshMetrics).mockResolvedValueOnce({ source: "azure-devops", refreshedAt: "", metrics: [], diagnostics: [] });
 
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>

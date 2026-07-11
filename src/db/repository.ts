@@ -12,6 +12,7 @@ export type MetricSourceConfig = {
   source: MetricSource;
   settings: string;
   enabled: number | boolean;
+  encryptedPat: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -31,6 +32,7 @@ export type DashboardRepository = {
   findGoal(goalId: string): Promise<Goal | undefined>;
   findMetricSourceConfig(teamId: string, source: MetricSource): Promise<MetricSourceConfig | undefined>;
   upsertMetricSourceConfig(teamId: string, source: MetricSource, settings: string, enabled: number | boolean): Promise<void>;
+  updateMetricSourcePat(teamId: string, source: MetricSource, encryptedPat: string | null): Promise<void>;
   replaceMetricsBySource(teamId: string, source: MetricSource, metrics: QaMetric[]): Promise<void>;
   findTestSuitesByTeam(teamId: string): Promise<TestSuite[]>;
   findMetricsByTeam(teamId: string): Promise<QaMetric[]>;
@@ -163,6 +165,12 @@ export function createPostgresRepository(pool: Pool): DashboardRepository {
           : { source, enabled, settings };
 
       await persistMetricSourceConfig(pool, teamId, config.source, config.settings, config.enabled);
+    },
+    async updateMetricSourcePat(teamId, source, encryptedPat) {
+      await pool.query(
+        `UPDATE "MetricSourceConfig" SET "encryptedPat" = $3, "updatedAt" = now() WHERE "teamId" = $1 AND "source" = $2`,
+        [teamId, source, encryptedPat],
+      );
     },
     async replaceMetricsBySource(teamId, source, metrics) {
       const client = await pool.connect();

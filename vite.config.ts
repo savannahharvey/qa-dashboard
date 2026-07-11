@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import { resolve } from "path";
 
 export default defineConfig({
@@ -25,5 +25,6 @@ export default defineConfig({
   test: {
     globals: true,
     setupFiles: ["src/client/test/setup.ts"],
+    exclude: [...configDefaults.exclude, "e2e/**"],
   },
 });

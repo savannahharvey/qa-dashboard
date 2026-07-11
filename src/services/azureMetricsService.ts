@@ -1,6 +1,7 @@
-import type { DashboardRepository } from "../db/repository.js";
+import type { DashboardRepository, MetricSourceConfig } from "../db/repository.js";
 import { formatMetricKind, formatMetricSource, formatMetricStatus, formatTestCategory } from "../domain/apiFormat.js";
 import type { MetricStatus, QaMetric, TestCategory } from "../domain/types.js";
+import { decryptPat } from "./patEncryption.js";
 
 type Diagnostic = { source: "azure-devops"; message: string };
 type AzureSettings = {
@@ -42,7 +43,7 @@ export async function refreshAzureMetrics(repository: DashboardRepository, teamI
   const settings = parseSettings(config.settings);
   const organization = settings.organization ?? getEnv(settings.organizationEnv ?? "AZURE_DEVOPS_ORG");
   const project = settings.project ?? getEnv(settings.projectEnv ?? "AZURE_DEVOPS_PROJECT");
-  const token = getEnv(settings.tokenEnv ?? "AZURE_DEVOPS_PAT");
+  const token = resolveToken(config, settings);
 
   if (!organization || !project || !token) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps organization, project, or token configuration is missing." });
@@ -94,7 +95,7 @@ export async function listAzurePipelines(repository: DashboardRepository, teamId
   const settings = parseSettings(config.settings);
   const organization = settings.organization ?? getEnv(settings.organizationEnv ?? "AZURE_DEVOPS_ORG");
   const project = settings.project ?? getEnv(settings.projectEnv ?? "AZURE_DEVOPS_PROJECT");
-  const token = getEnv(settings.tokenEnv ?? "AZURE_DEVOPS_PAT");
+  const token = resolveToken(config, settings);
 
   if (!organization || !project || !token) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps organization, project, or token configuration is missing." });
@@ -284,4 +285,16 @@ function parseSettings(settings: string): AzureSettings {
 
 function getEnv(name: string) {
   return process.env[name]?.trim();
+}
+
+function resolveToken(config: MetricSourceConfig, settings: AzureSettings): string | undefined {
+  if (config.encryptedPat) {
+    try {
+      return decryptPat(config.encryptedPat);
+    } catch {
+      // Treat an undecryptable stored PAT (e.g. key mismatch) as if no team PAT were set.
+    }
+  }
+
+  return getEnv(settings.tokenEnv ?? "AZURE_DEVOPS_PAT");
 }

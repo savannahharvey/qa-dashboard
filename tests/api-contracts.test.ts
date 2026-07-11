@@ -59,6 +59,30 @@ function createInMemoryRepository() {
       if (existing) Object.assign(existing, cfg);
       else metricSourceConfigs.push(cfg);
     },
+    async upsertMetricSourceConfig(teamId: string, source: string, settings: string, enabled: number | boolean) {
+      const existing = metricSourceConfigs.find((c) => c.teamId === teamId && c.source === source);
+      const now = new Date().toISOString();
+      if (existing) {
+        existing.settings = settings;
+        existing.enabled = enabled;
+        existing.updatedAt = now;
+      } else {
+        metricSourceConfigs.push({
+          id: `source-config-${teamId}-${source}`,
+          teamId,
+          source,
+          settings,
+          enabled,
+          encryptedPat: null,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    },
+    async updateMetricSourcePat(teamId: string, source: string, encryptedPat: string | null) {
+      const existing = metricSourceConfigs.find((c) => c.teamId === teamId && c.source === source);
+      if (existing) existing.encryptedPat = encryptedPat;
+    },
     async replaceMetricsBySource(teamId: string, source: string, m: any[]) {
       for (let i = metrics.length - 1; i >= 0; i--) {
         if (metrics[i].teamId === teamId && metrics[i].source === source) metrics.splice(i, 1);
@@ -100,6 +124,7 @@ vi.mock("../src/db/index.js", async () => ({
 
 beforeAll(async () => {
   process.env.NODE_ENV = "test";
+  process.env.ENCRYPTION_KEY = "1".repeat(64);
   // seed via helper functions below using the mocked repository
   seedTeam();
   seedDashboardFixture();
@@ -467,6 +492,160 @@ describe("Azure DevOps metric refresh API contracts", () => {
   it("validates unsupported refresh sources", async () => {
     const agent = await signedInMember("azuresource");
     await agent.post("/api/teams/team-qa/metrics/refresh").send({ source: "manual" }).expect(400);
+  });
+
+  it("stores, replaces, and clears a team's Azure DevOps PAT without ever returning it in plaintext", async () => {
+    const agent = await signedInMember("azurepatlifecycle");
+    const configBody = {
+      source: "AZURE_DEVOPS",
+      enabled: true,
+      settings: {
+        organization: "org",
+        project: "project",
+        categoryMap: {
+          unit: { runTitleIncludes: "unit" },
+          api: { runTitleIncludes: "api" },
+          ui: { runTitleIncludes: "ui" },
+        },
+      },
+    };
+
+    await agent.post("/api/teams/team-qa/metrics/config").send({ ...configBody, pat: "first-pat" }).expect(200);
+    const afterFirstSave = await agent.get("/api/teams/team-qa/metrics/config").expect(200);
+    expect(afterFirstSave.body.config.hasPat).toBe(true);
+    expect(JSON.stringify(afterFirstSave.body)).not.toContain("first-pat");
+
+    await agent.post("/api/teams/team-qa/metrics/config").send({ ...configBody, pat: "second-pat" }).expect(200);
+    const afterReplace = await agent.get("/api/teams/team-qa/metrics/config").expect(200);
+    expect(afterReplace.body.config.hasPat).toBe(true);
+    expect(JSON.stringify(afterReplace.body)).not.toContain("second-pat");
+
+    await agent.post("/api/teams/team-qa/metrics/config").send({ ...configBody, pat: "" }).expect(200);
+    const afterClear = await agent.get("/api/teams/team-qa/metrics/config").expect(200);
+    expect(afterClear.body.config.hasPat).toBe(false);
+  });
+
+  it("saving settings without a pat field leaves a previously stored PAT untouched", async () => {
+    const agent = await signedInMember("azurepatpreserve");
+    const configBody = {
+      source: "AZURE_DEVOPS",
+      enabled: true,
+      settings: {
+        organization: "org",
+        project: "project",
+        categoryMap: {
+          unit: { runTitleIncludes: "unit" },
+          api: { runTitleIncludes: "api" },
+          ui: { runTitleIncludes: "ui" },
+        },
+      },
+    };
+
+    await agent.post("/api/teams/team-qa/metrics/config").send({ ...configBody, pat: "stays-set" }).expect(200);
+    await agent.post("/api/teams/team-qa/metrics/config").send(configBody).expect(200);
+
+    const response = await agent.get("/api/teams/team-qa/metrics/config").expect(200);
+    expect(response.body.config.hasPat).toBe(true);
+
+    await inMemory.updateMetricSourcePat("team-qa", "AZURE_DEVOPS", null);
+  });
+
+  it("prefers a team's stored PAT over the shared AZURE_DEVOPS_PAT env var when syncing", async () => {
+    process.env.AZURE_DEVOPS_PAT = "env-pat";
+    const agent = await signedInMember("azurepatpreference");
+
+    await agent
+      .post("/api/teams/team-qa/metrics/config")
+      .send({
+        source: "AZURE_DEVOPS",
+        enabled: true,
+        settings: {
+          organization: "org",
+          project: "project",
+          categoryMap: {
+            unit: { runTitleIncludes: "unit" },
+            api: { runTitleIncludes: "api" },
+            ui: { runTitleIncludes: "ui" },
+          },
+        },
+        pat: "team-pat",
+      })
+      .expect(200);
+
+    let capturedAuth: string | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+        capturedAuth = (init?.headers as Record<string, string> | undefined)?.Authorization;
+        return { ok: false, json: async () => ({}) } as Response;
+      }),
+    );
+
+    await agent.post("/api/teams/team-qa/metrics/refresh").send({ source: "azure-devops" }).expect(200);
+
+    expect(capturedAuth).toBe(`Basic ${Buffer.from(":team-pat").toString("base64")}`);
+
+    await inMemory.updateMetricSourcePat("team-qa", "AZURE_DEVOPS", null);
+  });
+
+  it("prefers a team's stored PAT over the env var when listing pipelines", async () => {
+    process.env.AZURE_DEVOPS_PAT = "env-pat";
+    const agent = await signedInMember("azurepipelinespatpreference");
+
+    await agent
+      .post("/api/teams/team-qa/metrics/config")
+      .send({
+        source: "AZURE_DEVOPS",
+        enabled: true,
+        settings: {
+          organization: "org",
+          project: "project",
+          categoryMap: {
+            unit: { runTitleIncludes: "unit" },
+            api: { runTitleIncludes: "api" },
+            ui: { runTitleIncludes: "ui" },
+          },
+        },
+        pat: "team-pat",
+      })
+      .expect(200);
+
+    let capturedAuth: string | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+        capturedAuth = (init?.headers as Record<string, string> | undefined)?.Authorization;
+        return jsonResponse({ value: [] });
+      }),
+    );
+
+    await agent.get("/api/teams/team-qa/metrics/azure/pipelines").expect(200);
+
+    expect(capturedAuth).toBe(`Basic ${Buffer.from(":team-pat").toString("base64")}`);
+
+    await inMemory.updateMetricSourcePat("team-qa", "AZURE_DEVOPS", null);
+  });
+
+  it("falls back to the shared AZURE_DEVOPS_PAT env var when a team has no stored PAT", async () => {
+    await inMemory.updateMetricSourcePat("team-qa", "AZURE_DEVOPS", null);
+    process.env.AZURE_DEVOPS_PAT = "env-pat";
+    enableAzureConfig();
+    process.env.AZURE_DEVOPS_ORG = "org";
+    process.env.AZURE_DEVOPS_PROJECT = "project";
+    const agent = await signedInMember("azurepatfallback");
+
+    let capturedAuth: string | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+        capturedAuth = (init?.headers as Record<string, string> | undefined)?.Authorization;
+        return { ok: false, json: async () => ({}) } as Response;
+      }),
+    );
+
+    await agent.post("/api/teams/team-qa/metrics/refresh").send({ source: "azure-devops" }).expect(200);
+
+    expect(capturedAuth).toBe(`Basic ${Buffer.from(":env-pat").toString("base64")}`);
   });
 });
 

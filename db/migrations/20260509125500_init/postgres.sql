@@ -80,10 +80,14 @@ CREATE TABLE IF NOT EXISTS "MetricSourceConfig" (
     "source" TEXT NOT NULL,
     "settings" TEXT NOT NULL,
     "enabled" BOOLEAN NOT NULL DEFAULT false,
+    "encryptedPat" TEXT,
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ NOT NULL,
     CONSTRAINT "MetricSourceConfig_teamId_fkey" FOREIGN KEY ("teamId") REFERENCES "Team" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- Idempotent for databases where MetricSourceConfig already existed before this column was added.
+ALTER TABLE "MetricSourceConfig" ADD COLUMN IF NOT EXISTS "encryptedPat" TEXT;
 
 CREATE UNIQUE INDEX IF NOT EXISTS "User_username_key" ON "User"("username");
 CREATE UNIQUE INDEX IF NOT EXISTS "Team_joinCode_key" ON "Team"("joinCode");

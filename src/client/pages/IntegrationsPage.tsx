@@ -6,6 +6,7 @@ import {
   refreshMetrics,
   saveMetricSourceConfig,
   type AzurePipelineDefinition,
+  type Diagnostic,
 } from "../api";
 import { AppShell } from "../components/AppShell";
 import { useAuth } from "../state/AuthContext";
@@ -135,6 +136,9 @@ function AzureDevOpsCard({ teamId }: { teamId: string }) {
   const [pipelines, setPipelines] = useState<AzurePipelineDefinition[]>([]);
   const [pipelinesLoading, setPipelinesLoading] = useState(false);
   const [draft, setDraft] = useState<AzureConfigDraft>(defaultAzureDraft);
+  const [editingPat, setEditingPat] = useState(true);
+  const [patInput, setPatInput] = useState("");
+  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
   const selectedPipeline = useMemo(
     () => pipelines.find((pipeline) => String(pipeline.id) === draft.buildDefinitionId),
     [draft.buildDefinitionId, pipelines],
@@ -167,20 +171,26 @@ function AzureDevOpsCard({ teamId }: { teamId: string }) {
             ui: categoryMap.ui?.runTitleIncludes ?? "ui",
           },
         });
+        setEditingPat(!config?.hasPat);
+        setPatInput("");
 
         if (config?.enabled) {
           const pipelinesResponse = await getAzurePipelines(teamId);
           if (!cancelled) {
             setPipelines(pipelinesResponse.pipelines);
+            setDiagnostics(pipelinesResponse.diagnostics);
             setPipelinesMessage(
-              pipelinesResponse.pipelines.length > 0
-                ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.`
-                : "No pipelines were found.",
+              pipelinesResponse.diagnostics.length === 0
+                ? pipelinesResponse.pipelines.length > 0
+                  ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.`
+                  : "No pipelines were found."
+                : "",
             );
           }
         } else if (!cancelled) {
           setPipelines([]);
           setPipelinesMessage("");
+          setDiagnostics([]);
         }
       } catch (err) {
         if (!cancelled) {
@@ -236,10 +246,13 @@ function AzureDevOpsCard({ teamId }: { teamId: string }) {
       });
       const pipelinesResponse = await getAzurePipelines(teamId);
       setPipelines(pipelinesResponse.pipelines);
+      setDiagnostics(pipelinesResponse.diagnostics);
       setPipelinesMessage(
-        pipelinesResponse.pipelines.length > 0
-          ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.`
-          : "No pipelines were found.",
+        pipelinesResponse.diagnostics.length === 0
+          ? pipelinesResponse.pipelines.length > 0
+            ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.`
+            : "No pipelines were found."
+          : "",
       );
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not reload Azure pipelines.");
@@ -269,6 +282,7 @@ function AzureDevOpsCard({ teamId }: { teamId: string }) {
             ui: { runTitleIncludes: draft.categoryMap.ui.trim() || "ui" },
           },
         },
+        ...(editingPat ? { pat: patInput.trim() } : {}),
       });
       const reloaded = await getMetricSourceConfig(teamId);
       const settings = reloaded.config?.settings ?? {};
@@ -284,14 +298,19 @@ function AzureDevOpsCard({ teamId }: { teamId: string }) {
           ui: categoryMap.ui?.runTitleIncludes ?? "ui",
         },
       });
+      setEditingPat(!reloaded.config?.hasPat);
+      setPatInput("");
       if (reloaded.config?.enabled) {
         try {
           const pipelinesResponse = await getAzurePipelines(teamId);
           setPipelines(pipelinesResponse.pipelines);
+          setDiagnostics(pipelinesResponse.diagnostics);
           setPipelinesMessage(
-            pipelinesResponse.pipelines.length > 0
-              ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.`
-              : "No pipelines were found.",
+            pipelinesResponse.diagnostics.length === 0
+              ? pipelinesResponse.pipelines.length > 0
+                ? `Loaded ${pipelinesResponse.pipelines.length} pipelines.`
+                : "No pipelines were found."
+              : "",
           );
         } catch {
           setPipelines([]);
@@ -300,6 +319,7 @@ function AzureDevOpsCard({ teamId }: { teamId: string }) {
       } else {
         setPipelines([]);
         setPipelinesMessage("");
+        setDiagnostics([]);
       }
       setMessage("Azure DevOps settings saved.");
     } catch (err) {
@@ -309,12 +329,44 @@ function AzureDevOpsCard({ teamId }: { teamId: string }) {
     }
   }
 
+  async function handleClearPat() {
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      const buildDefinitionId = draft.buildDefinitionId.trim() ? Number(draft.buildDefinitionId) : undefined;
+      await saveMetricSourceConfig(teamId, {
+        source: "AZURE_DEVOPS",
+        enabled: draft.enabled,
+        settings: {
+          organization: draft.organization.trim(),
+          project: draft.project.trim(),
+          ...(Number.isFinite(buildDefinitionId) ? { buildDefinitionId } : {}),
+          categoryMap: {
+            unit: { runTitleIncludes: draft.categoryMap.unit.trim() || "unit" },
+            api: { runTitleIncludes: draft.categoryMap.api.trim() || "api" },
+            ui: { runTitleIncludes: draft.categoryMap.ui.trim() || "ui" },
+          },
+        },
+        pat: "",
+      });
+      setEditingPat(true);
+      setPatInput("");
+      setMessage("Azure DevOps PAT cleared.");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not clear the Azure DevOps PAT.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleSyncNow() {
     setSyncing(true);
     setMessage("");
     try {
-      await refreshMetrics(teamId);
-      setMessage("Metrics synced.");
+      const response = await refreshMetrics(teamId);
+      setDiagnostics(response.diagnostics);
+      setMessage(response.diagnostics.length === 0 ? "Metrics synced." : "");
     } catch {
       setMessage("Sync could not complete.");
     } finally {
@@ -364,6 +416,32 @@ function AzureDevOpsCard({ teamId }: { teamId: string }) {
             placeholder="your-project"
           />
         </label>
+
+        {editingPat ? (
+          <label>
+            <span>Personal access token</span>
+            <input
+              type="password"
+              value={patInput}
+              onChange={(event) => setPatInput(event.target.value)}
+              placeholder="Paste an Azure DevOps PAT"
+              autoComplete="off"
+            />
+          </label>
+        ) : (
+          <div className="form-field">
+            <span>Personal access token</span>
+            <div className="azure-pat-saved">
+              <span className="muted">PAT saved</span>
+              <button className="button secondary" type="button" onClick={() => setEditingPat(true)}>
+                Replace
+              </button>
+              <button className="button secondary" type="button" onClick={handleClearPat} disabled={saving}>
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
 
         <label>
           <span>Pipeline</span>
@@ -446,6 +524,11 @@ function AzureDevOpsCard({ teamId }: { teamId: string }) {
         </div>
       </form>
 
+      {diagnostics.map((diagnostic, index) => (
+        <p key={index} className="form-error">
+          {diagnostic.message}
+        </p>
+      ))}
       {error ? <p className="form-error">{error}</p> : null}
     </article>
   );

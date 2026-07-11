@@ -94,7 +94,11 @@ export type AzureMetricSourceConfig = {
     buildDefinitionId?: number;
     categoryMap?: Partial<Record<"unit" | "api" | "ui", { runTitleIncludes?: string }>>;
   };
+  /** Set to save/replace a PAT, or "" to clear it. Omit to leave the stored PAT untouched. */
+  pat?: string;
 };
+
+export type AzureMetricSourceConfigResponse = AzureMetricSourceConfig & { hasPat: boolean };
 
 export type AzurePipelineDefinition = {
   id: number;
@@ -102,8 +106,10 @@ export type AzurePipelineDefinition = {
   path?: string;
 };
 
+export type Diagnostic = { source: string; message: string };
+
 export function getMetricSourceConfig(teamId: string) {
-  return requestJson<{ config: AzureMetricSourceConfig | null }>(`/api/teams/${teamId}/metrics/config`);
+  return requestJson<{ config: AzureMetricSourceConfigResponse | null }>(`/api/teams/${teamId}/metrics/config`);
 }
 
 export function saveMetricSourceConfig(
@@ -117,7 +123,7 @@ export function saveMetricSourceConfig(
 }
 
 export function getAzurePipelines(teamId: string) {
-  return requestJson<{ pipelines: AzurePipelineDefinition[]; diagnostics: Array<{ source: string; message: string }> }>(
+  return requestJson<{ pipelines: AzurePipelineDefinition[]; diagnostics: Diagnostic[] }>(
     `/api/teams/${teamId}/metrics/azure/pipelines`,
   );
 }
@@ -137,10 +143,13 @@ export function updateGoal(teamId: string, goalId: string, goal: GoalInput) {
 }
 
 export function refreshMetrics(teamId: string) {
-  return requestJson(`/api/teams/${teamId}/metrics/refresh`, {
-    method: "POST",
-    body: JSON.stringify({ source: "azure-devops" }),
-  });
+  return requestJson<{ source: string; refreshedAt: string; metrics: unknown[]; diagnostics: Diagnostic[] }>(
+    `/api/teams/${teamId}/metrics/refresh`,
+    {
+      method: "POST",
+      body: JSON.stringify({ source: "azure-devops" }),
+    },
+  );
 }
 
 export type TestsOverTimeRow = { period: string; total: number; passed: number };

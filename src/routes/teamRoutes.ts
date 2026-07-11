@@ -6,6 +6,7 @@ import { requireAuth, requireTeamMembership } from "../middleware/auth.js";
 import { listAzurePipelines, refreshAzureMetrics } from "../services/azureMetricsService.js";
 import { getTeamDashboard, getTeamGoals, getTeamMetrics } from "../services/dashboardService.js";
 import { formatGoal, validateAndBuildGoal } from "../services/goalService.js";
+import { encryptPat } from "../services/patEncryption.js";
 
 export const teamRoutes = Router();
 const protectedTeam = requireTeamMembership(repository);
@@ -144,6 +145,7 @@ teamRoutes.get("/:teamId/metrics/config", protectedTeam, async (req, res, next) 
         source: config.source,
         enabled: toBoolean(config.enabled),
         settings: parseMetricSourceSettings(config.settings),
+        hasPat: Boolean(config.encryptedPat),
       },
     });
   } catch (error) {
@@ -166,23 +168,27 @@ teamRoutes.post("/:teamId/metrics/config", protectedTeam, async (req, res, next)
     const source = typeof req.body?.source === "string" ? req.body.source : "";
     const enabled = typeof req.body?.enabled === "boolean" ? req.body.enabled : false;
     const settings = req.body?.settings ?? {};
+    const pat = typeof req.body?.pat === "string" ? req.body.pat.trim() : undefined;
 
     if (source !== "AZURE_DEVOPS" && source !== "azure-devops") {
       res.status(400).json({ error: "Validation failed", fields: { source: "Only azure-devops is supported" } });
       return;
     }
 
-    // Do not accept secrets in API payloads. Ensure settings do not include PAT or token values.
+    // The PAT travels in its own top-level field (see `pat` above), never inside `settings`.
     const forbiddenKeys = ["pat", "token", "AZURE_DEVOPS_PAT", "personalAccessToken"];
     for (const k of Object.keys(settings)) {
       if (forbiddenKeys.includes(k)) {
-        res.status(400).json({ error: "Validation failed", fields: { settings: "Secrets must not be sent in request body" } });
+        res.status(400).json({ error: "Validation failed", fields: { settings: "Secrets must not be sent inside settings" } });
         return;
       }
     }
 
-    // Store the provided settings JSON as a string. Server-side AZURE_DEVOPS_PAT must be set separately.
     await repository.upsertMetricSourceConfig(teamId, "AZURE_DEVOPS", JSON.stringify(settings), enabled ? 1 : 0);
+
+    if (pat !== undefined) {
+      await repository.updateMetricSourcePat(teamId, "AZURE_DEVOPS", pat === "" ? null : encryptPat(pat));
+    }
 
     res.json({ ok: true });
   } catch (error) {
