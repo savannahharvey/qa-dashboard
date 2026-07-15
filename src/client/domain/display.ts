@@ -49,10 +49,14 @@ export function progressPercent(goal: Goal) {
 }
 
 export function deriveKpis(dashboard: Dashboard) {
-  const passingMetrics = dashboard.metrics.filter((metric) => metric.kind === "tests-passing");
-  const passRate = passingMetrics.length
-    ? Math.round((passingMetrics.filter((metric) => metric.status === "passing").length / passingMetrics.length) * 100)
-    : null;
+  // Pass rate reflects the latest Azure DevOps run: actual tests passed / tests run, aggregated
+  // across the tests-passing metrics (one per category). Falls back to null when no run has counts.
+  const countedMetrics = dashboard.metrics.filter(
+    (metric) => metric.kind === "tests-passing" && typeof metric.totalTests === "number" && metric.totalTests > 0,
+  );
+  const totalTests = countedMetrics.reduce((sum, metric) => sum + (metric.totalTests ?? 0), 0);
+  const passedTests = countedMetrics.reduce((sum, metric) => sum + (metric.passedTests ?? 0), 0);
+  const passRate = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : null;
 
   const coverageMetrics = dashboard.metrics.filter((metric) => metric.kind === "test-coverage" && typeof metric.value === "number");
   const avgCoverage = coverageMetrics.length
