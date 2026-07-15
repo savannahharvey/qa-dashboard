@@ -1,4 +1,4 @@
-import type { DashboardRepository, MetricSourceConfig } from "../db/repository.js";
+import type { DashboardRepository, MetricSourceConfig, TestRunResultRecord } from "../db/repository.js";
 import { formatMetricKind, formatMetricSource, formatMetricStatus, formatTestCategory } from "../domain/apiFormat.js";
 import type { MetricStatus, QaMetric, TestCategory } from "../domain/types.js";
 import { decryptPat } from "./patEncryption.js";
@@ -33,12 +33,12 @@ export async function refreshAzureMetrics(repository: DashboardRepository, teamI
     config = await repository.findMetricSourceConfig(teamId, "AZURE_DEVOPS");
   } catch {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps configuration could not be loaded." });
-    return persistAndRespond(repository, teamId, unavailableMetrics(teamId, refreshedAt), refreshedAt, diagnostics);
+    return persistAndRespond(repository, teamId, unavailableMetrics(teamId, refreshedAt), [], refreshedAt, diagnostics);
   }
 
   if (!config || (config.enabled !== 1 && config.enabled !== true)) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps configuration is not enabled." });
-    return persistAndRespond(repository, teamId, unavailableMetrics(teamId, refreshedAt), refreshedAt, diagnostics);
+    return persistAndRespond(repository, teamId, unavailableMetrics(teamId, refreshedAt), [], refreshedAt, diagnostics);
   }
 
   const settings = parseSettings(config.settings);
@@ -48,24 +48,28 @@ export async function refreshAzureMetrics(repository: DashboardRepository, teamI
 
   if (!organization || !project || !token) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps organization, project, or token configuration is missing." });
-    return persistAndRespond(repository, teamId, unavailableMetrics(teamId, refreshedAt), refreshedAt, diagnostics);
+    return persistAndRespond(repository, teamId, unavailableMetrics(teamId, refreshedAt), [], refreshedAt, diagnostics);
   }
 
   let metrics: QaMetric[];
+  let results: TestRunResultRecord[] = [];
   try {
-    metrics = await fetchAzureMetrics(teamId, refreshedAt, organization, project, token, settings);
+    const fetched = await fetchAzureMetrics(teamId, refreshedAt, organization, project, token, settings);
+    metrics = fetched.metrics;
+    results = fetched.results;
   } catch {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps metrics could not be refreshed." });
     metrics = unavailableMetrics(teamId, refreshedAt);
   }
 
-  return persistAndRespond(repository, teamId, metrics, refreshedAt, diagnostics);
+  return persistAndRespond(repository, teamId, metrics, results, refreshedAt, diagnostics);
 }
 
 async function persistAndRespond(
   repository: DashboardRepository,
   teamId: string,
   metrics: QaMetric[],
+  results: TestRunResultRecord[],
   refreshedAt: string,
   diagnostics: Diagnostic[],
 ) {
@@ -74,6 +78,12 @@ async function persistAndRespond(
   } catch (error) {
     console.error("replaceMetricsBySource failed", error);
     diagnostics.push({ source: "azure-devops", message: "Refreshed metrics could not be saved." });
+  }
+
+  try {
+    await repository.replaceTestRunResults(teamId, results);
+  } catch (error) {
+    console.error("replaceTestRunResults failed", error);
   }
 
   // Record a daily pass-rate snapshot so the Test Results page can chart history over time.
@@ -157,6 +167,7 @@ async function fetchAzureMetrics(
   const runsBody = (await runsResponse.json()) as { value?: Array<Record<string, unknown>> };
   const runs = Array.isArray(runsBody.value) ? runsBody.value : [];
   const metrics: QaMetric[] = [];
+  const results: TestRunResultRecord[] = [];
 
   for (const category of categories) {
     const run = selectRun(runs, category, settings);
@@ -177,14 +188,33 @@ async function fetchAzureMetrics(
       continue;
     }
 
-    const resultsBody = (await resultsResponse.json()) as { value?: Array<{ outcome?: string }> };
-    const outcomes = Array.isArray(resultsBody.value) ? resultsBody.value.map((result) => result.outcome) : [];
+    const resultsBody = (await resultsResponse.json()) as { value?: Array<AzureTestResult> };
+    const runResults = Array.isArray(resultsBody.value) ? resultsBody.value : [];
+    const outcomes = runResults.map((result) => result.outcome);
+    for (const result of runResults) {
+      const name = readTestName(result);
+      if (name) {
+        results.push({ category: categoryApiValues[category], name, outcome: result.outcome ?? null });
+      }
+    }
     const counts = readRunCounts(run, outcomes);
     metrics.push(buildMetric(teamId, category, mapOutcomes(outcomes), null, refreshedAt, counts));
     metrics.push(buildCoverageMetric(teamId, category, null, refreshedAt));
   }
 
-  return metrics;
+  return { metrics, results };
+}
+
+type AzureTestResult = {
+  outcome?: string;
+  testCaseTitle?: string;
+  automatedTestName?: string;
+  testCaseReferenceName?: string;
+  testCase?: { name?: string };
+};
+
+function readTestName(result: AzureTestResult): string {
+  return String(result.testCaseTitle ?? result.automatedTestName ?? result.testCase?.name ?? result.testCaseReferenceName ?? "").trim();
 }
 
 function selectRun(runs: Array<Record<string, unknown>>, category: TestCategory, settings: AzureSettings) {

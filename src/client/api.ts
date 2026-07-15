@@ -96,6 +96,45 @@ export function getTeamMetricHistory(teamId: string) {
   return requestJson<{ history: MetricHistoryRow[] }>(`/api/teams/${teamId}/metrics/history`);
 }
 
+export type UnavailablePanel = { available: false; reason: string };
+
+export type BalanceSlice = {
+  category: "unit" | "api" | "ui";
+  label: string;
+  count: number;
+  percent: number;
+  targetPercent: number;
+};
+
+export type TestTypeBalancePanel =
+  | UnavailablePanel
+  | { available: true; score: number; totalTests: number; distribution: BalanceSlice[]; recommendation: string };
+
+export type PrincipleResult = {
+  key: string;
+  label: string;
+  status: "pass" | "warn" | "missing";
+  matched: number;
+  examples: string[];
+};
+
+export type QualityPrinciplesPanel =
+  | UnavailablePanel
+  | { available: true; score: number; principles: PrincipleResult[]; scannedTests: number };
+
+export type TeamAnalytics = {
+  generatedAt: string;
+  healthScore: number | null;
+  testTypeBalance: TestTypeBalancePanel;
+  qualityPrinciples: QualityPrinciplesPanel;
+  ciCdVelocity: UnavailablePanel;
+  userFlowCoverage: UnavailablePanel;
+};
+
+export function getTeamAnalytics(teamId: string) {
+  return requestJson<TeamAnalytics>(`/api/teams/${teamId}/analytics`);
+}
+
 export type AzureMetricSourceConfig = {
   source: "AZURE_DEVOPS";
   enabled: boolean;

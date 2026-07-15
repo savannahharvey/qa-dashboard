@@ -135,3 +135,17 @@ CREATE TABLE IF NOT EXISTS "MetricSnapshot" (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "MetricSnapshot_teamId_capturedOn_key" ON "MetricSnapshot"("teamId", "capturedOn");
+
+-- Individual Azure DevOps test results, replaced on each sync. Powers name-based analytics
+-- (quality-principle keyword matching, and future frequently-failing-test detection).
+CREATE TABLE IF NOT EXISTS "TestRunResult" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "teamId" TEXT NOT NULL,
+    "category" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "outcome" TEXT,
+    "capturedAt" TIMESTAMPTZ NOT NULL,
+    CONSTRAINT "TestRunResult_teamId_fkey" FOREIGN KEY ("teamId") REFERENCES "Team" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS "TestRunResult_teamId_idx" ON "TestRunResult"("teamId");

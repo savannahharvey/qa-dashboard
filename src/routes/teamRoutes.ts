@@ -4,6 +4,7 @@ import { repository } from "../db/index.js";
 import { toBoolean } from "../db/repository.js";
 import { requireAuth, requireTeamMembership } from "../middleware/auth.js";
 import { listAzurePipelines, refreshAzureMetrics } from "../services/azureMetricsService.js";
+import { getTeamAnalytics } from "../services/analyticsService.js";
 import { getTeamDashboard, getTeamGoals, getTeamMetrics } from "../services/dashboardService.js";
 import { formatGoal, validateAndBuildGoal } from "../services/goalService.js";
 import { encryptPat } from "../services/patEncryption.js";
@@ -125,6 +126,15 @@ teamRoutes.post("/:teamId/metrics/refresh", protectedTeam, async (req, res, next
     }
 
     res.json(await refreshAzureMetrics(repository, teamId));
+  } catch (error) {
+    next(error);
+  }
+});
+
+teamRoutes.get("/:teamId/analytics", protectedTeam, async (req, res, next) => {
+  try {
+    const teamId = String(req.params.teamId);
+    res.json(await getTeamAnalytics(repository, teamId));
   } catch (error) {
     next(error);
   }

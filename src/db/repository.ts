@@ -26,6 +26,14 @@ export type MetricSnapshot = {
   updatedAt: string;
 };
 
+export type TestRunResultRecord = {
+  category: string;
+  name: string;
+  outcome: string | null;
+};
+
+export type StoredTestRunResult = TestRunResultRecord & { id: string; teamId: string; capturedAt: string };
+
 export type DashboardRepository = {
   findTeam(teamId: string): Promise<Team | undefined>;
   findTeamByJoinCode(joinCode: string): Promise<Team | undefined>;
@@ -49,6 +57,8 @@ export type DashboardRepository = {
   getTestsOverTime(repo?: string, branch?: string, from?: string, to?: string, granularity?: string): Promise<{ period: string; total: number; passed: number }[]>;
   recordMetricSnapshot(teamId: string, passedTests: number, totalTests: number): Promise<void>;
   findMetricSnapshots(teamId: string, limit: number): Promise<MetricSnapshot[]>;
+  replaceTestRunResults(teamId: string, results: TestRunResultRecord[]): Promise<void>;
+  findTestRunResults(teamId: string): Promise<StoredTestRunResult[]>;
 };
 
 
@@ -288,6 +298,35 @@ export function createPostgresRepository(pool: Pool): DashboardRepository {
           `SELECT "id", "teamId", to_char("capturedOn", 'YYYY-MM-DD') AS "capturedOn", "passedTests", "totalTests", "updatedAt"
            FROM "MetricSnapshot" WHERE "teamId" = $1 ORDER BY "capturedOn" DESC LIMIT $2`,
           [teamId, limit],
+        ),
+      );
+    },
+    async replaceTestRunResults(teamId, results) {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(`DELETE FROM "TestRunResult" WHERE "teamId" = $1`, [teamId]);
+        const capturedAt = new Date().toISOString();
+        for (const result of results) {
+          await client.query(
+            `INSERT INTO "TestRunResult" ("id", "teamId", "category", "name", "outcome", "capturedAt")
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [randomUUID(), teamId, result.category, result.name, result.outcome, capturedAt],
+          );
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+    async findTestRunResults(teamId) {
+      return many<StoredTestRunResult>(
+        await pool.query(
+          `SELECT "id", "teamId", "category", "name", "outcome", "capturedAt" FROM "TestRunResult" WHERE "teamId" = $1`,
+          [teamId],
         ),
       );
     },
