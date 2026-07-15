@@ -180,9 +180,9 @@ export function createPostgresRepository(pool: Pool): DashboardRepository {
         for (const metric of metrics) {
           await client.query(
             `INSERT INTO "QaMetric" (
-              "id", "teamId", "testSuiteId", "category", "kind", "status", "value", "unit", "source", "measuredAt", "createdAt", "updatedAt"
+              "id", "teamId", "testSuiteId", "category", "kind", "status", "value", "unit", "source", "measuredAt", "passedTests", "failedTests", "totalTests", "createdAt", "updatedAt"
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
             [
               metric.id,
               metric.teamId,
@@ -194,6 +194,9 @@ export function createPostgresRepository(pool: Pool): DashboardRepository {
               metric.unit,
               metric.source,
               metric.measuredAt,
+              metric.passedTests,
+              metric.failedTests,
+              metric.totalTests,
               metric.createdAt,
               metric.updatedAt,
             ],

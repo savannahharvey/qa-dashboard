@@ -22,6 +22,12 @@ export function CategoryMetricsRow({ cards }: { cards: CategoryCardData[] }) {
         const coverageMetric = metrics.find((metric) => metric.kind === "test-coverage");
         const passingStatus = passingMetric?.status ?? "unavailable";
 
+        const total = passingMetric?.totalTests;
+        const passed = passingMetric?.passedTests;
+        const failed = passingMetric?.failedTests;
+        const hasCounts = typeof total === "number" && typeof passed === "number";
+        const skipped = hasCounts ? Math.max(0, total - passed - (failed ?? 0)) : 0;
+
         return (
           <article className={`metric-card ${category}`} key={category}>
             <div className="metric-card-header">
@@ -33,6 +39,19 @@ export function CategoryMetricsRow({ cards }: { cards: CategoryCardData[] }) {
             <div className="metric-figure-row">
               <div>
                 <div className="metric-figure mono">
+                  {hasCounts ? (
+                    <>
+                      {passed}
+                      <span>/{total}</span>
+                    </>
+                  ) : (
+                    "–"
+                  )}
+                </div>
+                <div className="metric-figure-label">Tests passing</div>
+              </div>
+              <div>
+                <div className="metric-figure mono">
                   {typeof coverageMetric?.value === "number" ? `${coverageMetric.value}%` : "–"}
                 </div>
                 <div className="metric-figure-label">Test coverage</div>
@@ -41,6 +60,12 @@ export function CategoryMetricsRow({ cards }: { cards: CategoryCardData[] }) {
                 <Sparkline data={sparkline} width={120} height={40} color={categoryColors[category]} />
               ) : null}
             </div>
+            {hasCounts ? (
+              <p className="metric-breakdown mono">
+                {passed} passed · {failed ?? 0} failed
+                {skipped > 0 ? ` · ${skipped} skipped` : ""}
+              </p>
+            ) : null}
           </article>
         );
       })}

@@ -27,6 +27,9 @@ export type QaMetric = {
   unit?: string | null;
   source: "sample" | "manual" | "azure-devops";
   measuredAt?: string;
+  passedTests?: number;
+  failedTests?: number;
+  totalTests?: number;
 };
 
 export type GoalProgress = {

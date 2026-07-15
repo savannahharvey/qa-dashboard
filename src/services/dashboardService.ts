@@ -111,5 +111,8 @@ function formatQaMetric(metric: QaMetric) {
     unit: metric.unit,
     source: formatMetricSource(metric.source),
     measuredAt: metric.measuredAt ?? undefined,
+    passedTests: metric.passedTests ?? undefined,
+    failedTests: metric.failedTests ?? undefined,
+    totalTests: metric.totalTests ?? undefined,
   };
 }

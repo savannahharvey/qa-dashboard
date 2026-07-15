@@ -74,6 +74,11 @@ CREATE TABLE IF NOT EXISTS "QaMetric" (
     CONSTRAINT "QaMetric_testSuiteId_fkey" FOREIGN KEY ("testSuiteId") REFERENCES "TestSuite" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+-- Idempotent for databases created before test-count tracking was added.
+ALTER TABLE "QaMetric" ADD COLUMN IF NOT EXISTS "passedTests" INTEGER;
+ALTER TABLE "QaMetric" ADD COLUMN IF NOT EXISTS "failedTests" INTEGER;
+ALTER TABLE "QaMetric" ADD COLUMN IF NOT EXISTS "totalTests" INTEGER;
+
 CREATE TABLE IF NOT EXISTS "MetricSourceConfig" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "teamId" TEXT NOT NULL,

@@ -6,9 +6,21 @@ import { useAuth } from "../state/AuthContext";
 import type { QaMetric } from "../types";
 
 function exportMetricsCsv(metrics: QaMetric[]) {
-  const header = "category,kind,status,value,unit,source\n";
+  const header = "category,kind,status,value,unit,source,passedTests,failedTests,totalTests\n";
   const rows = metrics
-    .map((metric) => [metric.category, metric.kind, metric.status ?? "", metric.value ?? "", metric.unit ?? "", metric.source].join(","))
+    .map((metric) =>
+      [
+        metric.category,
+        metric.kind,
+        metric.status ?? "",
+        metric.value ?? "",
+        metric.unit ?? "",
+        metric.source,
+        metric.passedTests ?? "",
+        metric.failedTests ?? "",
+        metric.totalTests ?? "",
+      ].join(","),
+    )
     .join("\n");
   const blob = new Blob([header + rows], { type: "text/csv" });
   const url = URL.createObjectURL(blob);

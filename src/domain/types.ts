@@ -68,6 +68,9 @@ export type QaMetric = {
   unit: string | null;
   source: MetricSource;
   measuredAt: string | null;
+  passedTests: number | null;
+  failedTests: number | null;
+  totalTests: number | null;
   createdAt: string;
   updatedAt: string;
 };

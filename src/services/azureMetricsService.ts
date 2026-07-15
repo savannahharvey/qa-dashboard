@@ -4,6 +4,7 @@ import type { MetricStatus, QaMetric, TestCategory } from "../domain/types.js";
 import { decryptPat } from "./patEncryption.js";
 
 type Diagnostic = { source: "azure-devops"; message: string };
+type TestCounts = { passed: number | null; failed: number | null; total: number | null };
 type AzureSettings = {
   organizationEnv?: string;
   projectEnv?: string;
@@ -70,7 +71,8 @@ async function persistAndRespond(
 ) {
   try {
     await repository.replaceMetricsBySource(teamId, "AZURE_DEVOPS", metrics);
-  } catch {
+  } catch (error) {
+    console.error("replaceMetricsBySource failed", error);
     diagnostics.push({ source: "azure-devops", message: "Refreshed metrics could not be saved." });
   }
   return formatRefreshResponse(refreshedAt, metrics, diagnostics);
@@ -154,7 +156,8 @@ async function fetchAzureMetrics(
 
     const resultsBody = (await resultsResponse.json()) as { value?: Array<{ outcome?: string }> };
     const outcomes = Array.isArray(resultsBody.value) ? resultsBody.value.map((result) => result.outcome) : [];
-    metrics.push(buildMetric(teamId, category, mapOutcomes(outcomes), null, refreshedAt));
+    const counts = readRunCounts(run, outcomes);
+    metrics.push(buildMetric(teamId, category, mapOutcomes(outcomes), null, refreshedAt, counts));
     metrics.push(buildCoverageMetric(teamId, category, null, refreshedAt));
   }
 
@@ -169,8 +172,13 @@ function selectRun(runs: Array<Record<string, unknown>>, category: TestCategory,
 
   return runs.find((run) => {
     const name = String(run.name ?? run.title ?? "").toLowerCase();
-    const definitionId = Number((run.buildConfiguration as { id?: number } | undefined)?.id ?? run.buildDefinitionId);
-    return name.includes(titleNeedle.toLowerCase()) && (!buildDefinitionId || definitionId === buildDefinitionId);
+    const definitionId = Number(
+      (run.buildConfiguration as { buildDefinitionId?: number } | undefined)?.buildDefinitionId ?? run.buildDefinitionId,
+    );
+    // The test/runs list endpoint doesn't include buildConfiguration, so definitionId is often
+    // unavailable — only enforce the pipeline filter when we actually have something to compare.
+    const matchesPipeline = !buildDefinitionId || !Number.isFinite(definitionId) || definitionId === buildDefinitionId;
+    return name.includes(titleNeedle.toLowerCase()) && matchesPipeline;
   });
 }
 
@@ -222,9 +230,16 @@ function unavailableMetrics(teamId: string, timestamp: string) {
   ]);
 }
 
-function buildMetric(teamId: string, category: TestCategory, status: MetricStatus, testSuiteId: string | null, timestamp: string): QaMetric {
+function buildMetric(
+  teamId: string,
+  category: TestCategory,
+  status: MetricStatus,
+  testSuiteId: string | null,
+  timestamp: string,
+  counts?: TestCounts,
+): QaMetric {
   return {
-    id: `metric-azure-${categoryApiValues[category]}-passing`,
+    id: `metric-azure-${teamId}-${categoryApiValues[category]}-passing`,
     teamId,
     testSuiteId,
     category,
@@ -234,6 +249,9 @@ function buildMetric(teamId: string, category: TestCategory, status: MetricStatu
     unit: "state",
     source: "AZURE_DEVOPS",
     measuredAt: timestamp,
+    passedTests: counts?.passed ?? null,
+    failedTests: counts?.failed ?? null,
+    totalTests: counts?.total ?? null,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
@@ -241,7 +259,7 @@ function buildMetric(teamId: string, category: TestCategory, status: MetricStatu
 
 function buildCoverageMetric(teamId: string, category: TestCategory, value: number | null, timestamp: string): QaMetric {
   return {
-    id: `metric-azure-${categoryApiValues[category]}-coverage`,
+    id: `metric-azure-${teamId}-${categoryApiValues[category]}-coverage`,
     teamId,
     testSuiteId: null,
     category,
@@ -251,9 +269,32 @@ function buildCoverageMetric(teamId: string, category: TestCategory, value: numb
     unit: "%",
     source: "AZURE_DEVOPS",
     measuredAt: timestamp,
+    passedTests: null,
+    failedTests: null,
+    totalTests: null,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
+}
+
+// The run summary (totalTests/passedTests) is authoritative and always present; the per-result
+// outcomes give an exact failed count. Fall back to deriving from the summary when results are absent.
+function readRunCounts(run: Record<string, unknown>, outcomes: Array<string | undefined>): TestCounts {
+  const normalized = outcomes.map((outcome) => String(outcome ?? "").toLowerCase());
+  const failedOutcomes = normalized.filter((outcome) => ["failed", "error", "timeout", "aborted"].includes(outcome)).length;
+  const passedOutcomes = normalized.filter((outcome) => outcome === "passed").length;
+
+  const total = toCount(run.totalTests) ?? (outcomes.length > 0 ? outcomes.length : null);
+  const passed = toCount(run.passedTests) ?? (outcomes.length > 0 ? passedOutcomes : null);
+  const failed =
+    outcomes.length > 0 ? failedOutcomes : total !== null && passed !== null ? Math.max(0, total - passed) : null;
+
+  return { passed, failed, total };
+}
+
+function toCount(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function formatRefreshResponse(refreshedAt: string, metrics: QaMetric[], diagnostics: Diagnostic[]) {
@@ -270,6 +311,9 @@ function formatRefreshResponse(refreshedAt: string, metrics: QaMetric[], diagnos
       unit: metric.unit,
       source: formatMetricSource(metric.source),
       measuredAt: metric.measuredAt,
+      passedTests: metric.passedTests,
+      failedTests: metric.failedTests,
+      totalTests: metric.totalTests,
     })),
     diagnostics,
   };
