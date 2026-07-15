@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../components/AppShell";
-import { getTeamMetrics } from "../api";
+import { getTeamMetrics, getTeamMetricHistory, type MetricHistoryRow } from "../api";
 import { CategoryMetricsRow, type CategoryCardData } from "../components/CategoryMetricsRow";
 import { useAuth } from "../state/AuthContext";
 import type { QaMetric } from "../types";
@@ -31,15 +31,25 @@ function exportMetricsCsv(metrics: QaMetric[]) {
   URL.revokeObjectURL(url);
 }
 
+function formatHistoryDate(date: string) {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    return date;
+  }
+  return parsed.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+}
+
 export function TestResultsPage() {
   const { primaryTeam } = useAuth();
   const [metrics, setMetrics] = useState<QaMetric[]>([]);
+  const [history, setHistory] = useState<MetricHistoryRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!primaryTeam) {
       setMetrics([]);
+      setHistory([]);
       setError("");
       return;
     }
@@ -48,10 +58,11 @@ export function TestResultsPage() {
     setLoading(true);
     setError("");
 
-    getTeamMetrics(primaryTeam.id)
-      .then((response) => {
+    Promise.all([getTeamMetrics(primaryTeam.id), getTeamMetricHistory(primaryTeam.id)])
+      .then(([metricsResponse, historyResponse]) => {
         if (!cancelled) {
-          setMetrics(response.metrics ?? []);
+          setMetrics(metricsResponse.metrics ?? []);
+          setHistory(historyResponse.history ?? []);
         }
       })
       .catch(() => {
@@ -124,6 +135,39 @@ export function TestResultsPage() {
               <p className="muted">Save Azure DevOps settings on the Integrations page and refresh to populate live results.</p>
             </section>
           )
+        ) : null}
+
+        {primaryTeam && !loading && metrics.length > 0 ? (
+          <section className="history-section">
+            <div className="history-header">
+              <h2>Pass rate over time</h2>
+              <p className="muted">One snapshot is recorded each day you sync Azure DevOps.</p>
+            </div>
+            {history.length > 0 ? (
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Passing</th>
+                    <th scope="col">Pass rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((row) => (
+                    <tr key={row.date}>
+                      <td>{formatHistoryDate(row.date)}</td>
+                      <td className="mono">
+                        {row.passedTests} / {row.totalTests}
+                      </td>
+                      <td className="mono">{row.passRate === null ? "–" : `${row.passRate}%`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="muted">No history yet — sync again tomorrow to start building a trend.</p>
+            )}
+          </section>
         ) : null}
       </main>
     </AppShell>

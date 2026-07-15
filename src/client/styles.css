@@ -776,7 +776,8 @@ textarea:focus {
 .goal-card,
 .empty-state,
 .join-panel,
-.goal-form {
+.goal-form,
+.history-section {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -845,6 +846,48 @@ textarea:focus {
   color: var(--muted);
   font-size: 0.76rem;
   margin: 0.9rem 0 0;
+}
+
+.history-section {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.4rem 1.4rem;
+}
+
+.history-header {
+  margin-bottom: 1rem;
+}
+
+.history-header h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.2rem;
+}
+
+.history-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.history-table th,
+.history-table td {
+  border-bottom: 1px solid var(--border-soft);
+  padding: 0.6rem 0.5rem;
+  text-align: left;
+}
+
+.history-table th {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.history-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.history-table td.mono {
+  font-family: var(--font-mono);
 }
 
 .status {

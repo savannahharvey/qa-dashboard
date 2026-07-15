@@ -122,3 +122,16 @@ CREATE TABLE IF NOT EXISTS "TestMetric" (
 );
 
 CREATE INDEX IF NOT EXISTS "TestMetric_repo_branch_period_idx" ON "TestMetric"("repo", "branch", "period");
+
+-- One aggregate pass-rate snapshot per team per day, recorded on each Azure sync.
+CREATE TABLE IF NOT EXISTS "MetricSnapshot" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "teamId" TEXT NOT NULL,
+    "capturedOn" DATE NOT NULL,
+    "passedTests" INTEGER NOT NULL,
+    "totalTests" INTEGER NOT NULL,
+    "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "MetricSnapshot_teamId_fkey" FOREIGN KEY ("teamId") REFERENCES "Team" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "MetricSnapshot_teamId_capturedOn_key" ON "MetricSnapshot"("teamId", "capturedOn");

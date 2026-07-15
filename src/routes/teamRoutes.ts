@@ -130,6 +130,26 @@ teamRoutes.post("/:teamId/metrics/refresh", protectedTeam, async (req, res, next
   }
 });
 
+teamRoutes.get("/:teamId/metrics/history", protectedTeam, async (req, res, next) => {
+  try {
+    const teamId = String(req.params.teamId);
+    const limitParam = Number(req.query.limit);
+    const limit = Number.isFinite(limitParam) ? Math.min(Math.max(Math.trunc(limitParam), 1), 90) : 30;
+    const snapshots = await repository.findMetricSnapshots(teamId, limit);
+
+    res.json({
+      history: snapshots.map((snapshot) => ({
+        date: snapshot.capturedOn,
+        passedTests: snapshot.passedTests,
+        totalTests: snapshot.totalTests,
+        passRate: snapshot.totalTests > 0 ? Math.round((snapshot.passedTests / snapshot.totalTests) * 100) : null,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 teamRoutes.get("/:teamId/metrics/config", protectedTeam, async (req, res, next) => {
   try {
     const teamId = String(req.params.teamId);

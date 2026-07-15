@@ -85,6 +85,17 @@ export function getTeamMetrics(teamId: string) {
   return requestJson<{ metrics: Dashboard["metrics"] }>(`/api/teams/${teamId}/metrics`);
 }
 
+export type MetricHistoryRow = {
+  date: string;
+  passedTests: number;
+  totalTests: number;
+  passRate: number | null;
+};
+
+export function getTeamMetricHistory(teamId: string) {
+  return requestJson<{ history: MetricHistoryRow[] }>(`/api/teams/${teamId}/metrics/history`);
+}
+
 export type AzureMetricSourceConfig = {
   source: "AZURE_DEVOPS";
   enabled: boolean;

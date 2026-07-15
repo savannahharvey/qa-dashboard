@@ -17,6 +17,15 @@ export type MetricSourceConfig = {
   updatedAt: string;
 };
 
+export type MetricSnapshot = {
+  id: string;
+  teamId: string;
+  capturedOn: string;
+  passedTests: number;
+  totalTests: number;
+  updatedAt: string;
+};
+
 export type DashboardRepository = {
   findTeam(teamId: string): Promise<Team | undefined>;
   findTeamByJoinCode(joinCode: string): Promise<Team | undefined>;
@@ -38,6 +47,8 @@ export type DashboardRepository = {
   findMetricsByTeam(teamId: string): Promise<QaMetric[]>;
   findGoalsByTeam(teamId: string): Promise<GoalWithOwner[]>;
   getTestsOverTime(repo?: string, branch?: string, from?: string, to?: string, granularity?: string): Promise<{ period: string; total: number; passed: number }[]>;
+  recordMetricSnapshot(teamId: string, passedTests: number, totalTests: number): Promise<void>;
+  findMetricSnapshots(teamId: string, limit: number): Promise<MetricSnapshot[]>;
 };
 
 
@@ -261,6 +272,24 @@ export function createPostgresRepository(pool: Pool): DashboardRepository {
       const result = await pool.query(q, params);
 
       return (result.rows || []).map((r: any) => ({ period: r.period instanceof Date ? r.period.toISOString() : r.period, total: Number(r.total), passed: Number(r.passed) }));
+    },
+    async recordMetricSnapshot(teamId, passedTests, totalTests) {
+      await pool.query(
+        `INSERT INTO "MetricSnapshot" ("id", "teamId", "capturedOn", "passedTests", "totalTests", "updatedAt")
+         VALUES ($1, $2, CURRENT_DATE, $3, $4, now())
+         ON CONFLICT ("teamId", "capturedOn")
+         DO UPDATE SET "passedTests" = EXCLUDED."passedTests", "totalTests" = EXCLUDED."totalTests", "updatedAt" = now()`,
+        [randomUUID(), teamId, passedTests, totalTests],
+      );
+    },
+    async findMetricSnapshots(teamId, limit) {
+      return many<MetricSnapshot>(
+        await pool.query(
+          `SELECT "id", "teamId", to_char("capturedOn", 'YYYY-MM-DD') AS "capturedOn", "passedTests", "totalTests", "updatedAt"
+           FROM "MetricSnapshot" WHERE "teamId" = $1 ORDER BY "capturedOn" DESC LIMIT $2`,
+          [teamId, limit],
+        ),
+      );
     },
   };
 }

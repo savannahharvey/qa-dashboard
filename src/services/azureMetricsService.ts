@@ -75,7 +75,30 @@ async function persistAndRespond(
     console.error("replaceMetricsBySource failed", error);
     diagnostics.push({ source: "azure-devops", message: "Refreshed metrics could not be saved." });
   }
+
+  // Record a daily pass-rate snapshot so the Test Results page can chart history over time.
+  const snapshot = aggregateCounts(metrics);
+  if (snapshot.total > 0) {
+    try {
+      await repository.recordMetricSnapshot(teamId, snapshot.passed, snapshot.total);
+    } catch (error) {
+      console.error("recordMetricSnapshot failed", error);
+    }
+  }
+
   return formatRefreshResponse(refreshedAt, metrics, diagnostics);
+}
+
+function aggregateCounts(metrics: QaMetric[]) {
+  let passed = 0;
+  let total = 0;
+  for (const metric of metrics) {
+    if (metric.kind === "TESTS_PASSING" && typeof metric.totalTests === "number" && metric.totalTests > 0) {
+      passed += metric.passedTests ?? 0;
+      total += metric.totalTests;
+    }
+  }
+  return { passed, total };
 }
 
 export async function listAzurePipelines(repository: DashboardRepository, teamId: string) {
