@@ -6,12 +6,9 @@ import { decryptPat } from "./patEncryption.js";
 type Diagnostic = { source: "azure-devops"; message: string };
 type TestCounts = { passed: number | null; failed: number | null; total: number | null };
 type AzureSettings = {
-  organizationEnv?: string;
-  projectEnv?: string;
   organization?: string;
   project?: string;
   buildDefinitionId?: number;
-  tokenEnv?: string;
   categoryMap?: Partial<Record<"unit" | "api" | "ui", { runTitleIncludes?: string; buildDefinitionId?: number }>>;
 };
 
@@ -42,9 +39,9 @@ export async function refreshAzureMetrics(repository: DashboardRepository, teamI
   }
 
   const settings = parseSettings(config.settings);
-  const organization = settings.organization ?? getEnv(settings.organizationEnv ?? "AZURE_DEVOPS_ORG");
-  const project = settings.project ?? getEnv(settings.projectEnv ?? "AZURE_DEVOPS_PROJECT");
-  const token = resolveToken(config, settings);
+  const organization = settings.organization;
+  const project = settings.project;
+  const token = resolveToken(config);
 
   if (!organization || !project || !token) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps organization, project, or token configuration is missing." });
@@ -128,9 +125,9 @@ export async function listAzurePipelines(repository: DashboardRepository, teamId
   }
 
   const settings = parseSettings(config.settings);
-  const organization = settings.organization ?? getEnv(settings.organizationEnv ?? "AZURE_DEVOPS_ORG");
-  const project = settings.project ?? getEnv(settings.projectEnv ?? "AZURE_DEVOPS_PROJECT");
-  const token = resolveToken(config, settings);
+  const organization = settings.organization;
+  const project = settings.project;
+  const token = resolveToken(config);
 
   if (!organization || !project || !token) {
     diagnostics.push({ source: "azure-devops", message: "Azure DevOps organization, project, or token configuration is missing." });
@@ -380,11 +377,7 @@ function parseSettings(settings: string): AzureSettings {
   }
 }
 
-function getEnv(name: string) {
-  return process.env[name]?.trim();
-}
-
-function resolveToken(config: MetricSourceConfig, settings: AzureSettings): string | undefined {
+function resolveToken(config: MetricSourceConfig): string | undefined {
   if (config.encryptedPat) {
     try {
       return decryptPat(config.encryptedPat);
@@ -393,5 +386,6 @@ function resolveToken(config: MetricSourceConfig, settings: AzureSettings): stri
     }
   }
 
-  return getEnv(settings.tokenEnv ?? "AZURE_DEVOPS_PAT");
+  // No env-var fallback: Azure DevOps auth relies exclusively on the per-team PAT stored via the UI.
+  return undefined;
 }

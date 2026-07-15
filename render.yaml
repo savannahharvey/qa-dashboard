@@ -10,3 +10,8 @@ services:
         value: production
       - key: DATABASE_URL
         sync: false
+      # Required to encrypt/decrypt per-team Azure DevOps PATs at rest (AES-256-GCM, 32-byte hex).
+      # Must stay constant once PATs are saved — changing it makes existing PATs undecryptable.
+      # Set the value in the Render dashboard (Environment tab); do not commit it here.
+      - key: ENCRYPTION_KEY
+        sync: false

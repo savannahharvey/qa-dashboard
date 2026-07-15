@@ -1,5 +1,6 @@
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { encryptPat } from "../src/services/patEncryption.js";
 
 let app: Awaited<ReturnType<typeof import("../src/app.js").createApp>>;
 
@@ -12,6 +13,8 @@ function createInMemoryRepository() {
   const metrics: any[] = [];
   const goals: any[] = [];
   const metricSourceConfigs: any[] = [];
+  const testRunResults: any[] = [];
+  const metricSnapshots: any[] = [];
 
   teams.push({ id: "team-qa", name: "QA Dashboard Team", joinCode: "QA-232" });
 
@@ -83,6 +86,15 @@ function createInMemoryRepository() {
       const existing = metricSourceConfigs.find((c) => c.teamId === teamId && c.source === source);
       if (existing) existing.encryptedPat = encryptedPat;
     },
+    async replaceTestRunResults(teamId: string, results: any[]) {
+      for (let i = testRunResults.length - 1; i >= 0; i--) {
+        if (testRunResults[i].teamId === teamId) testRunResults.splice(i, 1);
+      }
+      for (const r of results) testRunResults.push({ teamId, ...r });
+    },
+    async recordMetricSnapshot(teamId: string, passed: number, total: number) {
+      metricSnapshots.push({ teamId, passed, total, recordedAt: new Date().toISOString() });
+    },
     async replaceMetricsBySource(teamId: string, source: string, m: any[]) {
       for (let i = metrics.length - 1; i >= 0; i--) {
         if (metrics[i].teamId === teamId && metrics[i].source === source) metrics.splice(i, 1);
@@ -132,11 +144,11 @@ beforeAll(async () => {
   app = (await import("../src/app.js")).createApp();
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.restoreAllMocks();
-  delete process.env.AZURE_DEVOPS_ORG;
-  delete process.env.AZURE_DEVOPS_PROJECT;
-  delete process.env.AZURE_DEVOPS_PAT;
+  // Azure auth is per-team only; reset the shared config between tests so state never leaks.
+  await inMemory.upsertMetricSourceConfig("team-qa", "AZURE_DEVOPS", JSON.stringify({}), 0);
+  await inMemory.updateMetricSourcePat("team-qa", "AZURE_DEVOPS", null);
 });
 
 afterAll(async () => {
@@ -330,8 +342,8 @@ describe("Azure DevOps metric refresh API contracts", () => {
         source: "AZURE_DEVOPS",
         enabled: true,
         settings: expect.objectContaining({
-          organizationEnv: "AZURE_DEVOPS_ORG",
-          projectEnv: "AZURE_DEVOPS_PROJECT",
+          organization: "org",
+          project: "project",
         }),
       }),
     );
@@ -349,9 +361,6 @@ describe("Azure DevOps metric refresh API contracts", () => {
 
   it("returns Azure build definitions for the current team", async () => {
     enableAzureConfig();
-    process.env.AZURE_DEVOPS_ORG = "org";
-    process.env.AZURE_DEVOPS_PROJECT = "project";
-    process.env.AZURE_DEVOPS_PAT = "secret-token";
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string | URL | Request) => {
@@ -393,9 +402,6 @@ describe("Azure DevOps metric refresh API contracts", () => {
 
   it("normalizes successful Azure test results and persists refreshed metrics", async () => {
     enableAzureConfig();
-    process.env.AZURE_DEVOPS_ORG = "org";
-    process.env.AZURE_DEVOPS_PROJECT = "project";
-    process.env.AZURE_DEVOPS_PAT = "secret-token";
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = typeof input === "string" ? input : "url" in input ? input.url : String(input);
       if (url.includes("/_apis/test/runs?")) {
@@ -444,16 +450,13 @@ describe("Azure DevOps metric refresh API contracts", () => {
         ui: "shared",
       },
     );
-    process.env.AZURE_DEVOPS_ORG = "org";
-    process.env.AZURE_DEVOPS_PROJECT = "project";
-    process.env.AZURE_DEVOPS_PAT = "secret-token";
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = typeof input === "string" ? input : "url" in input ? input.url : String(input);
       if (url.includes("/_apis/test/runs?")) {
         return jsonResponse({
           value: [
-            { id: 1, name: "shared pipeline", buildConfiguration: { id: 1 } },
-            { id: 2, name: "shared pipeline", buildConfiguration: { id: 2 } },
+            { id: 1, name: "shared pipeline", buildConfiguration: { buildDefinitionId: 1 } },
+            { id: 2, name: "shared pipeline", buildConfiguration: { buildDefinitionId: 2 } },
           ],
         });
       }
@@ -476,9 +479,6 @@ describe("Azure DevOps metric refresh API contracts", () => {
 
   it("returns unavailable metrics when Azure requests fail", async () => {
     enableAzureConfig();
-    process.env.AZURE_DEVOPS_ORG = "org";
-    process.env.AZURE_DEVOPS_PROJECT = "project";
-    process.env.AZURE_DEVOPS_PAT = "secret-token";
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, json: async () => ({ message: "nope" }) }) as Response));
     const agent = await signedInMember("azurefailure");
 
@@ -550,8 +550,7 @@ describe("Azure DevOps metric refresh API contracts", () => {
     await inMemory.updateMetricSourcePat("team-qa", "AZURE_DEVOPS", null);
   });
 
-  it("prefers a team's stored PAT over the shared AZURE_DEVOPS_PAT env var when syncing", async () => {
-    process.env.AZURE_DEVOPS_PAT = "env-pat";
+  it("uses the team's stored PAT for auth when syncing", async () => {
     const agent = await signedInMember("azurepatpreference");
 
     await agent
@@ -588,8 +587,7 @@ describe("Azure DevOps metric refresh API contracts", () => {
     await inMemory.updateMetricSourcePat("team-qa", "AZURE_DEVOPS", null);
   });
 
-  it("prefers a team's stored PAT over the env var when listing pipelines", async () => {
-    process.env.AZURE_DEVOPS_PAT = "env-pat";
+  it("uses the team's stored PAT for auth when listing pipelines", async () => {
     const agent = await signedInMember("azurepipelinespatpreference");
 
     await agent
@@ -626,26 +624,20 @@ describe("Azure DevOps metric refresh API contracts", () => {
     await inMemory.updateMetricSourcePat("team-qa", "AZURE_DEVOPS", null);
   });
 
-  it("falls back to the shared AZURE_DEVOPS_PAT env var when a team has no stored PAT", async () => {
-    await inMemory.updateMetricSourcePat("team-qa", "AZURE_DEVOPS", null);
-    process.env.AZURE_DEVOPS_PAT = "env-pat";
+  it("returns unavailable metrics without calling Azure when a team has no stored PAT", async () => {
     enableAzureConfig();
-    process.env.AZURE_DEVOPS_ORG = "org";
-    process.env.AZURE_DEVOPS_PROJECT = "project";
+    await inMemory.updateMetricSourcePat("team-qa", "AZURE_DEVOPS", null);
     const agent = await signedInMember("azurepatfallback");
 
-    let capturedAuth: string | undefined;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
-        capturedAuth = (init?.headers as Record<string, string> | undefined)?.Authorization;
-        return { ok: false, json: async () => ({}) } as Response;
-      }),
-    );
+    const fetchMock = vi.fn(async () => ({ ok: false, json: async () => ({}) }) as Response);
+    vi.stubGlobal("fetch", fetchMock);
 
-    await agent.post("/api/teams/team-qa/metrics/refresh").send({ source: "azure-devops" }).expect(200);
+    const response = await agent.post("/api/teams/team-qa/metrics/refresh").send({ source: "azure-devops" }).expect(200);
 
-    expect(capturedAuth).toBe(`Basic ${Buffer.from(":env-pat").toString("base64")}`);
+    // Without a PAT there is no way to authenticate, so we never reach out to Azure.
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(response.body.metrics).toHaveLength(6);
+    expect(response.body.metrics.every((metric: { status?: string }) => metric.status === "unavailable")).toBe(true);
   });
 });
 
@@ -760,8 +752,8 @@ function enableAzureConfig(
     teamId: "team-qa",
     source: "AZURE_DEVOPS",
     settings: JSON.stringify({
-      organizationEnv: "AZURE_DEVOPS_ORG",
-      projectEnv: "AZURE_DEVOPS_PROJECT",
+      organization: "org",
+      project: "project",
       ...(typeof overrides.buildDefinitionId === "number" ? { buildDefinitionId: overrides.buildDefinitionId } : {}),
       categoryMap: {
         unit: { runTitleIncludes: categoryMapTitles.unit ?? "unit" },
@@ -769,6 +761,8 @@ function enableAzureConfig(
         ui: { runTitleIncludes: categoryMapTitles.ui ?? "ui" },
       },
     }),
+    // Auth comes exclusively from the team's stored PAT (no env-var fallback).
+    encryptedPat: encryptPat("secret-token"),
     enabled: 1,
     createdAt: now,
     updatedAt: now,

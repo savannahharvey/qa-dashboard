@@ -34,8 +34,9 @@ async function run() {
     source: 'AZURE_DEVOPS',
     enabled: true,
     settings: {
-      // If you leave these blank, the server will fall back to process.env.AZURE_DEVOPS_ORG / PROJECT
-      organization: process.env.AZURE_DEVOPS_ORG || 'their-org', 
+      // These must be set explicitly — the server has no env-var fallback for org/project.
+      // (process.env here is just a convenience default for whoever runs this script locally.)
+      organization: process.env.AZURE_DEVOPS_ORG || 'their-org',
       project: process.env.AZURE_DEVOPS_PROJECT || 'their-project',
       categoryMap: {
         unit: { runTitleIncludes: 'unit' },
