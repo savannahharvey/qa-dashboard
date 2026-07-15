@@ -6,7 +6,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { TestResultsPage } from "./TestResultsPage";
-import { getTeamMetrics } from "../api";
+import { getTeamMetrics, getTeamMetricHistory } from "../api";
 import { useAuth } from "../state/AuthContext";
 import type { QaMetric, Team } from "../types";
 
@@ -16,10 +16,12 @@ vi.mock("../state/AuthContext", () => ({
 
 vi.mock("../api", () => ({
   getTeamMetrics: vi.fn(),
+  getTeamMetricHistory: vi.fn(),
 }));
 
 const useAuthMock = vi.mocked(useAuth);
 const getTeamMetricsMock = vi.mocked(getTeamMetrics);
+const getTeamMetricHistoryMock = vi.mocked(getTeamMetricHistory);
 
 const metricsFixture: QaMetric[] = [
   {
@@ -43,6 +45,7 @@ describe("TestResultsPage", () => {
   it("renders the print button and invokes window.print", async () => {
     useAuthMock.mockReturnValue(authWithTeam());
     getTeamMetricsMock.mockResolvedValue({ metrics: metricsFixture });
+    getTeamMetricHistoryMock.mockResolvedValue({ history: [] });
     const printSpy = vi.spyOn(window, "print").mockImplementation(() => undefined);
 
     render(

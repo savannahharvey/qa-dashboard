@@ -57,6 +57,9 @@ describe("metric progress", () => {
       unit: "%",
       source: "MANUAL",
       measuredAt: null,
+      passedTests: null,
+      failedTests: null,
+      totalTests: null,
       createdAt: "2026-05-09T00:00:00.000Z",
       updatedAt: "2026-05-09T00:00:00.000Z",
     } as const;
@@ -89,6 +92,9 @@ describe("metric progress", () => {
       unit: null,
       source: "MANUAL",
       measuredAt: null,
+      passedTests: null,
+      failedTests: null,
+      totalTests: null,
       createdAt: "2026-05-09T00:00:00.000Z",
       updatedAt: "2026-05-09T00:00:00.000Z",
     } as const;
