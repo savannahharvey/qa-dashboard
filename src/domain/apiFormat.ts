@@ -20,6 +20,7 @@ const metricStatusMap: Record<MetricStatus, string> = {
 const metricSourceMap: Record<MetricSource, string> = {
   MANUAL: "manual",
   AZURE_DEVOPS: "azure-devops",
+  GITHUB: "github",
 };
 
 const goalScopeMap: Record<GoalScope, string> = {

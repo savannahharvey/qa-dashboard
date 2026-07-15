@@ -3,8 +3,15 @@
 import { MemoryRouter } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { getAzurePipelines, getMetricSourceConfig, refreshMetrics, saveMetricSourceConfig } from "../api";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  getAzurePipelines,
+  getGithubIntegration,
+  getMetricSourceConfig,
+  refreshMetrics,
+  saveGithubIntegration,
+  saveMetricSourceConfig,
+} from "../api";
 import { IntegrationsPage } from "./IntegrationsPage";
 
 vi.mock("../state/AuthContext", () => ({
@@ -19,12 +26,19 @@ vi.mock("../api", async () => {
     getMetricSourceConfig: vi.fn(),
     saveMetricSourceConfig: vi.fn(),
     refreshMetrics: vi.fn(),
+    getGithubIntegration: vi.fn(),
+    saveGithubIntegration: vi.fn(),
   };
 });
 
 import { useAuth } from "../state/AuthContext";
 
 const useAuthMock = vi.mocked(useAuth);
+
+beforeEach(() => {
+  vi.mocked(getGithubIntegration).mockResolvedValue({ config: null, status: { status: "idle" } });
+  vi.mocked(saveGithubIntegration).mockResolvedValue({ ok: true, hasPat: false, status: { status: "idle" } });
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -159,7 +173,57 @@ describe("IntegrationsPage", () => {
     expect(screen.queryByText("No pipelines were found.")).not.toBeInTheDocument();
   });
 
-  it("renders GitHub connect as inert and Jenkins/Jira as coming soon", async () => {
+  it("connects a GitHub repository and shows a connected badge", async () => {
+    const user = userEvent.setup();
+    useAuthMock.mockReturnValue(authWithTeam());
+    vi.mocked(getMetricSourceConfig).mockResolvedValue({ config: null });
+    vi.mocked(getAzurePipelines).mockResolvedValue({ pipelines: [], diagnostics: [] });
+    vi.mocked(getGithubIntegration).mockResolvedValue({ config: null, status: { status: "idle" } });
+    vi.mocked(saveGithubIntegration).mockResolvedValue({
+      ok: true,
+      hasPat: false,
+      status: { status: "connected" },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard/integrations"]}>
+        <IntegrationsPage />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("GitHub")).toBeInTheDocument();
+    await user.click(screen.getByLabelText("Enable GitHub connection"));
+    await user.type(screen.getByPlaceholderText("github.com/acme/qa-dashboard"), "github.com/acme/qa-dashboard");
+    await user.click(screen.getByRole("button", { name: "Save GitHub settings" }));
+
+    expect(saveGithubIntegration).toHaveBeenCalledWith(
+      "team-qa",
+      expect.objectContaining({ enabled: true, repoUrl: "github.com/acme/qa-dashboard" }),
+    );
+    expect(await screen.findByText("GitHub settings saved.")).toBeInTheDocument();
+    expect(screen.getByText("● Connected")).toBeInTheDocument();
+  });
+
+  it("surfaces a GitHub connectivity error from the live check", async () => {
+    useAuthMock.mockReturnValue(authWithTeam());
+    vi.mocked(getMetricSourceConfig).mockResolvedValue({ config: null });
+    vi.mocked(getAzurePipelines).mockResolvedValue({ pipelines: [], diagnostics: [] });
+    vi.mocked(getGithubIntegration).mockResolvedValue({
+      config: { source: "GITHUB", enabled: true, settings: { repoUrl: "acme/private", branch: "main" }, hasPat: true },
+      status: { status: "error", message: "Repository not found, or the token can't access it." },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard/integrations"]}>
+        <IntegrationsPage />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Repository not found, or the token can't access it.")).toBeInTheDocument();
+    expect(screen.getByText("Connection error")).toBeInTheDocument();
+  });
+
+  it("renders Jenkins/Jira as coming soon", async () => {
     useAuthMock.mockReturnValue(authWithTeam());
     vi.mocked(getMetricSourceConfig).mockResolvedValue({ config: null });
     vi.mocked(getAzurePipelines).mockResolvedValue({ pipelines: [], diagnostics: [] });
@@ -170,9 +234,7 @@ describe("IntegrationsPage", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("GitHub")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Connect repository" })).toBeDisabled();
-    expect(screen.getByText("Jenkins")).toBeInTheDocument();
+    expect(await screen.findByText("Jenkins")).toBeInTheDocument();
     expect(screen.getByText("Jira")).toBeInTheDocument();
     expect(screen.getAllByText("Coming soon")).toHaveLength(2);
   });

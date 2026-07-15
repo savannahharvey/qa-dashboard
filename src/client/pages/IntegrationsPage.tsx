@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   ApiError,
   getAzurePipelines,
+  getGithubIntegration,
   getMetricSourceConfig,
   refreshMetrics,
+  saveGithubIntegration,
   saveMetricSourceConfig,
   type AzurePipelineDefinition,
   type Diagnostic,
+  type GithubConnectivity,
 } from "../api";
 import { AppShell } from "../components/AppShell";
 import { useAuth } from "../state/AuthContext";
@@ -51,13 +54,15 @@ export function IntegrationsPage() {
 
         <section className="integrations-grid">
           {primaryTeam ? (
-            <AzureDevOpsCard teamId={primaryTeam.id} />
+            <>
+              <AzureDevOpsCard teamId={primaryTeam.id} />
+              <GitHubCard teamId={primaryTeam.id} />
+            </>
           ) : (
             <article className="integration-card">
-              <p className="muted">Join a team to configure Azure DevOps.</p>
+              <p className="muted">Join a team to configure your integrations.</p>
             </article>
           )}
-          <GitHubCard />
         </section>
 
         <section className="board-section">
@@ -84,9 +89,110 @@ export function IntegrationsPage() {
   );
 }
 
-function GitHubCard() {
+function githubStatusBadge(loading: boolean, enabled: boolean, status: GithubConnectivity["status"]) {
+  if (loading) {
+    return { className: "status unavailable", label: "Loading..." };
+  }
+  if (!enabled) {
+    return { className: "status unavailable", label: "Not connected" };
+  }
+  if (status === "connected") {
+    return { className: "status passing", label: "● Connected" };
+  }
+  if (status === "error") {
+    return { className: "status failing", label: "Connection error" };
+  }
+  return { className: "status unavailable", label: "Enabled" };
+}
+
+function GitHubCard({ teamId }: { teamId: string }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [enabled, setEnabled] = useState(false);
   const [repoUrl, setRepoUrl] = useState("");
   const [branch, setBranch] = useState("main");
+  const [hasPat, setHasPat] = useState(false);
+  const [editingPat, setEditingPat] = useState(true);
+  const [patInput, setPatInput] = useState("");
+  const [status, setStatus] = useState<GithubConnectivity>({ status: "idle" });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadGithubConfig() {
+      setLoading(true);
+      setError("");
+      setMessage("");
+
+      try {
+        const { config, status: liveStatus } = await getGithubIntegration(teamId);
+        if (cancelled) return;
+
+        setEnabled(config?.enabled ?? false);
+        setRepoUrl(config?.settings.repoUrl ?? "");
+        setBranch(config?.settings.branch ?? "main");
+        setHasPat(config?.hasPat ?? false);
+        setEditingPat(!config?.hasPat);
+        setPatInput("");
+        setStatus(liveStatus);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : "Could not load GitHub settings.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadGithubConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [teamId]);
+
+  async function persist(nextPat: string | undefined, successMessage: string) {
+    setSaving(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await saveGithubIntegration(teamId, {
+        enabled,
+        repoUrl: repoUrl.trim(),
+        branch: branch.trim() || "main",
+        ...(nextPat !== undefined ? { pat: nextPat } : {}),
+      });
+      setHasPat(response.hasPat);
+      setEditingPat(!response.hasPat);
+      setPatInput("");
+      setStatus(response.status);
+      setMessage(successMessage);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.fields.repoUrl ?? err.message);
+      } else {
+        setError("Could not save GitHub settings.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await persist(editingPat ? patInput.trim() : undefined, "GitHub settings saved.");
+  }
+
+  async function handleClearPat() {
+    await persist("", "GitHub personal access token cleared.");
+  }
+
+  const badge = githubStatusBadge(loading, enabled, status.status);
 
   return (
     <article className="integration-card">
@@ -98,30 +204,69 @@ function GitHubCard() {
             <div className="integration-sub">Code surface &amp; PR checks</div>
           </div>
         </div>
-        <span className="status unavailable">Not connected</span>
+        <span className={badge.className}>{badge.label}</span>
       </div>
-      <div className="integration-form">
+
+      <form className="stacked-form" onSubmit={handleSubmit}>
+        <label className="inline-toggle">
+          <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
+          <span>Enable GitHub connection</span>
+        </label>
+
         <label>
-          Repository URL
+          <span>Repository URL</span>
           <input
             value={repoUrl}
             onChange={(event) => setRepoUrl(event.target.value)}
             placeholder="github.com/acme/qa-dashboard"
           />
         </label>
+
         <label>
-          Default branch
-          <input value={branch} onChange={(event) => setBranch(event.target.value)} />
+          <span>Default branch</span>
+          <input value={branch} onChange={(event) => setBranch(event.target.value)} placeholder="main" />
         </label>
+
+        {editingPat ? (
+          <label>
+            <span>Personal access token (optional)</span>
+            <input
+              type="password"
+              value={patInput}
+              onChange={(event) => setPatInput(event.target.value)}
+              placeholder="Paste a GitHub PAT for private repos"
+              autoComplete="off"
+            />
+          </label>
+        ) : (
+          <div className="form-field">
+            <span>Personal access token</span>
+            <div className="azure-pat-saved">
+              <span className="muted">PAT saved</span>
+              <button className="button secondary" type="button" onClick={() => setEditingPat(true)}>
+                Replace
+              </button>
+              <button className="button secondary" type="button" onClick={handleClearPat} disabled={saving}>
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+
         <span className="integration-note">
-          GitHub integration isn&apos;t available yet — connecting a repository here doesn&apos;t do anything yet.
+          Public repositories connect without a token. Add a personal access token to reach private repositories.
         </span>
-      </div>
-      <div className="integration-actions">
-        <button className="button" type="button" disabled title="Not yet available">
-          Connect repository
-        </button>
-      </div>
+
+        <div className="integration-actions">
+          {message ? <span className="muted">{message}</span> : null}
+          <button className="button" type="submit" disabled={saving || loading}>
+            {saving ? "Saving..." : hasPat || enabled ? "Save GitHub settings" : "Connect repository"}
+          </button>
+        </div>
+      </form>
+
+      {status.status === "error" && status.message ? <p className="form-error">{status.message}</p> : null}
+      {error ? <p className="form-error">{error}</p> : null}
     </article>
   );
 }

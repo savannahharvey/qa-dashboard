@@ -1,5 +1,8 @@
-import type { DashboardRepository, StoredTestRunResult } from "../db/repository.js";
+import type { DashboardRepository, MetricSourceConfig, StoredTestRunResult } from "../db/repository.js";
+import { toBoolean } from "../db/repository.js";
 import type { QaMetric, TestCategory } from "../domain/types.js";
+import { decryptPat } from "./patEncryption.js";
+import { fetchGithubVelocity, type VelocityWeek } from "./githubService.js";
 
 type UnavailablePanel = { available: false; reason: string };
 
@@ -19,12 +22,24 @@ type QualityPrinciplesPanel =
   | UnavailablePanel
   | { available: true; score: number; principles: PrincipleResult[]; scannedTests: number };
 
+type CicdVelocityPanel =
+  | UnavailablePanel
+  | {
+      available: true;
+      score: number;
+      ratio: number;
+      totalCommits: number;
+      totalRuns: number;
+      weeks: VelocityWeek[];
+      recommendation: string;
+    };
+
 export type TeamAnalytics = {
   generatedAt: string;
   healthScore: number | null;
   testTypeBalance: TestTypeBalancePanel;
   qualityPrinciples: QualityPrinciplesPanel;
-  ciCdVelocity: UnavailablePanel;
+  ciCdVelocity: CicdVelocityPanel;
   userFlowCoverage: UnavailablePanel;
 };
 
@@ -68,24 +83,22 @@ const qualityPrincipleLibrary: Array<{ key: string; label: string; keywords: str
 ];
 
 export async function getTeamAnalytics(repository: DashboardRepository, teamId: string): Promise<TeamAnalytics> {
-  const [metrics, testResults] = await Promise.all([
+  const [metrics, testResults, githubConfig] = await Promise.all([
     repository.findMetricsByTeam(teamId),
     repository.findTestRunResults(teamId),
+    repository.findMetricSourceConfig(teamId, "GITHUB"),
   ]);
 
   const testTypeBalance = computeTestTypeBalance(metrics);
   const qualityPrinciples = computeQualityPrinciples(testResults);
+  const ciCdVelocity = await computeCicdVelocity(githubConfig);
 
-  const ciCdVelocity: UnavailablePanel = {
-    available: false,
-    reason: "Connect a GitHub repository on the Integrations page to compare pipeline runs against commit frequency.",
-  };
   const userFlowCoverage: UnavailablePanel = {
     available: false,
     reason: "Define named user flows to check which product paths your tests cover. User-flow management isn't set up yet.",
   };
 
-  const availableScores = [testTypeBalance, qualityPrinciples]
+  const availableScores = [testTypeBalance, qualityPrinciples, ciCdVelocity]
     .filter((panel): panel is Extract<typeof panel, { available: true }> => panel.available)
     .map((panel) => panel.score);
   const healthScore = availableScores.length
@@ -178,4 +191,82 @@ function computeQualityPrinciples(testResults: StoredTestRunResult[]): QualityPr
   );
 
   return { available: true, score, principles, scannedTests: testResults.length };
+}
+
+const CICD_NOT_CONNECTED =
+  "Connect a GitHub repository on the Integrations page to compare CI runs against commit frequency.";
+
+function parseGithubSettings(settings: string): { repoUrl?: string } {
+  try {
+    const parsed = JSON.parse(settings) as { repoUrl?: unknown };
+    return { repoUrl: typeof parsed.repoUrl === "string" ? parsed.repoUrl : undefined };
+  } catch {
+    return {};
+  }
+}
+
+async function computeCicdVelocity(config: MetricSourceConfig | undefined): Promise<CicdVelocityPanel> {
+  if (!config || !toBoolean(config.enabled)) {
+    return { available: false, reason: CICD_NOT_CONNECTED };
+  }
+
+  const { repoUrl } = parseGithubSettings(config.settings);
+  if (!repoUrl) {
+    return { available: false, reason: CICD_NOT_CONNECTED };
+  }
+
+  let token: string | undefined;
+  if (config.encryptedPat) {
+    try {
+      token = decryptPat(config.encryptedPat);
+    } catch {
+      // An undecryptable stored PAT (e.g. an ENCRYPTION_KEY change) is treated as no token — public repos still work.
+    }
+  }
+
+  let data: Awaited<ReturnType<typeof fetchGithubVelocity>>;
+  try {
+    data = await fetchGithubVelocity(repoUrl, token);
+  } catch {
+    return {
+      available: false,
+      reason: "Couldn't read commit and CI history from GitHub. Check the connection on the Integrations page.",
+    };
+  }
+
+  if (data.totalCommits === 0 && data.totalRuns === 0) {
+    return { available: false, reason: "No commits or CI runs in the last 12 weeks yet." };
+  }
+
+  // Alignment ratio: how many CI runs fired per commit, capped at 1.0. With commits but no runs the ratio is 0
+  // (code is landing with no automated verification); with runs but no commits it's a healthy 1.0.
+  const ratio = data.totalCommits === 0 ? 1 : Math.min(1, data.totalRuns / data.totalCommits);
+  const score = Math.round(ratio * 100);
+
+  return {
+    available: true,
+    score,
+    ratio,
+    totalCommits: data.totalCommits,
+    totalRuns: data.totalRuns,
+    weeks: data.weeks,
+    recommendation: buildVelocityRecommendation(ratio, data.totalCommits, data.totalRuns),
+  };
+}
+
+function buildVelocityRecommendation(ratio: number, totalCommits: number, totalRuns: number): string {
+  const summary = `Over the last 12 weeks: ${totalRuns} CI run${totalRuns === 1 ? "" : "s"} against ${totalCommits} commit${
+    totalCommits === 1 ? "" : "s"
+  }.`;
+
+  if (ratio >= 0.9) {
+    return `${summary} Automation is keeping pace — nearly every commit is covered by a CI run.`;
+  }
+  if (ratio >= 0.6) {
+    return `${summary} Most commits trigger CI, but some slip through. Run your pipeline on every push and pull request to close the gap.`;
+  }
+  if (ratio >= 0.3) {
+    return `${summary} CI runs are lagging behind commits — a lot of code is landing without automated verification.`;
+  }
+  return `${summary} Automation is far behind your code changes. Wire your pipeline to fire on every commit or pull request.`;
 }

@@ -1012,6 +1012,32 @@ textarea:focus {
   margin: 0.6rem 0 0;
 }
 
+.velocity-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.velocity-legend {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.82rem;
+}
+
+.velocity-legend-item {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.velocity-ratio {
+  color: var(--muted);
+  margin-left: auto;
+  font-size: 0.82rem;
+}
+
 .principle-list {
   display: flex;
   flex-direction: column;

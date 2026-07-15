@@ -7,7 +7,8 @@ import { listAzurePipelines, refreshAzureMetrics } from "../services/azureMetric
 import { getTeamAnalytics } from "../services/analyticsService.js";
 import { getTeamDashboard, getTeamGoals, getTeamMetrics } from "../services/dashboardService.js";
 import { formatGoal, validateAndBuildGoal } from "../services/goalService.js";
-import { encryptPat } from "../services/patEncryption.js";
+import { encryptPat, decryptPat } from "../services/patEncryption.js";
+import { checkGithubConnectivity, parseGithubRepo, type GithubConnectivity } from "../services/githubService.js";
 
 export const teamRoutes = Router();
 const protectedTeam = requireTeamMembership(repository);
@@ -226,6 +227,81 @@ teamRoutes.post("/:teamId/metrics/config", protectedTeam, async (req, res, next)
   }
 });
 
+teamRoutes.get("/:teamId/integrations/github", protectedTeam, async (req, res, next) => {
+  try {
+    const teamId = String(req.params.teamId);
+    const config = await repository.findMetricSourceConfig(teamId, "GITHUB");
+
+    if (!config) {
+      res.json({ config: null, status: { status: "idle" } });
+      return;
+    }
+
+    const settings = parseGithubSettings(config.settings);
+    const enabled = toBoolean(config.enabled);
+    let status: GithubConnectivity = { status: "idle" };
+    if (enabled && settings.repoUrl) {
+      const token = config.encryptedPat ? safeDecryptPat(config.encryptedPat) : undefined;
+      status = await checkGithubConnectivity(settings.repoUrl, token);
+    }
+
+    res.json({
+      config: {
+        source: config.source,
+        enabled,
+        settings: { repoUrl: settings.repoUrl ?? "", branch: settings.branch ?? "main" },
+        hasPat: Boolean(config.encryptedPat),
+      },
+      status,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+teamRoutes.post("/:teamId/integrations/github", protectedTeam, async (req, res, next) => {
+  try {
+    const teamId = String(req.params.teamId);
+    const enabled = typeof req.body?.enabled === "boolean" ? req.body.enabled : false;
+    const repoUrl = typeof req.body?.repoUrl === "string" ? req.body.repoUrl.trim() : "";
+    const branch =
+      typeof req.body?.branch === "string" && req.body.branch.trim() ? req.body.branch.trim() : "main";
+    // The PAT travels in its own top-level field, never inside settings.
+    const pat = typeof req.body?.pat === "string" ? req.body.pat.trim() : undefined;
+
+    if (enabled && !repoUrl) {
+      res.status(400).json({ error: "Validation failed", fields: { repoUrl: "Repository URL is required to connect GitHub." } });
+      return;
+    }
+
+    if (enabled && !parseGithubRepo(repoUrl)) {
+      res.status(400).json({
+        error: "Validation failed",
+        fields: { repoUrl: "Enter a repository as owner/repo or a github.com URL." },
+      });
+      return;
+    }
+
+    await repository.upsertMetricSourceConfig(teamId, "GITHUB", JSON.stringify({ repoUrl, branch }), enabled ? 1 : 0);
+
+    if (pat !== undefined) {
+      await repository.updateMetricSourcePat(teamId, "GITHUB", pat === "" ? null : encryptPat(pat));
+    }
+
+    // Re-read so the connectivity check uses the effective PAT — a freshly saved one, or the previously stored one.
+    const saved = await repository.findMetricSourceConfig(teamId, "GITHUB");
+    let status: GithubConnectivity = { status: "idle" };
+    if (enabled && repoUrl) {
+      const token = saved?.encryptedPat ? safeDecryptPat(saved.encryptedPat) : undefined;
+      status = await checkGithubConnectivity(repoUrl, token);
+    }
+
+    res.json({ ok: true, hasPat: Boolean(saved?.encryptedPat), status });
+  } catch (error) {
+    next(error);
+  }
+});
+
 teamRoutes.get("/:teamId/test-suites", async (req, res) => {
   const azureConfig = await repository.findMetricSourceConfig(req.params.teamId, "AZURE_DEVOPS");
   if (azureConfig && (azureConfig.enabled === 1 || azureConfig.enabled === true)) {
@@ -252,6 +328,27 @@ function parseMetricSourceSettings(settings: string) {
     return JSON.parse(settings) as Record<string, unknown>;
   } catch {
     return {};
+  }
+}
+
+function parseGithubSettings(settings: string): { repoUrl?: string; branch?: string } {
+  try {
+    const parsed = JSON.parse(settings) as { repoUrl?: unknown; branch?: unknown };
+    return {
+      repoUrl: typeof parsed.repoUrl === "string" ? parsed.repoUrl : undefined,
+      branch: typeof parsed.branch === "string" ? parsed.branch : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function safeDecryptPat(encryptedPat: string): string | undefined {
+  try {
+    return decryptPat(encryptedPat);
+  } catch {
+    // Treat an undecryptable stored PAT (e.g. an ENCRYPTION_KEY change) as if none were set.
+    return undefined;
   }
 }
 

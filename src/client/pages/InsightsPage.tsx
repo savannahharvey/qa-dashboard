@@ -3,8 +3,67 @@ import { AppShell } from "../components/AppShell";
 import { AnalyticsPanel } from "../components/AnalyticsPanel";
 import { HealthScoreRing, scoreColor } from "../components/HealthScoreRing";
 import { categoryColors } from "../components/CategoryMetricsRow";
-import { getTeamAnalytics, type BalanceSlice, type TeamAnalytics } from "../api";
+import { getTeamAnalytics, type BalanceSlice, type CicdVelocityWeek, type TeamAnalytics } from "../api";
 import { useAuth } from "../state/AuthContext";
+
+function VelocityChart({ weeks }: { weeks: CicdVelocityWeek[] }) {
+  const width = 320;
+  const height = 132;
+  const padding = { top: 8, right: 8, bottom: 18, left: 8 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const max = Math.max(1, ...weeks.map((week) => Math.max(week.commits, week.runs)));
+  const groupWidth = chartWidth / weeks.length;
+  const barWidth = Math.max(2, groupWidth / 2 - 2);
+
+  return (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label="Weekly CI runs versus commits over the last 12 weeks"
+    >
+      {weeks.map((week, index) => {
+        const groupX = padding.left + index * groupWidth;
+        const commitsHeight = (week.commits / max) * chartHeight;
+        const runsHeight = (week.runs / max) * chartHeight;
+        const baseY = padding.top + chartHeight;
+        return (
+          <g key={week.weekStart}>
+            <rect
+              x={groupX + groupWidth / 2 - barWidth - 1}
+              y={baseY - commitsHeight}
+              width={barWidth}
+              height={commitsHeight}
+              rx={1.5}
+              fill="var(--border-strong, #94a3b8)"
+            >
+              <title>{`Week of ${week.weekStart.slice(0, 10)}: ${week.commits} commits`}</title>
+            </rect>
+            <rect
+              x={groupX + groupWidth / 2 + 1}
+              y={baseY - runsHeight}
+              width={barWidth}
+              height={runsHeight}
+              rx={1.5}
+              fill="var(--accent, #2563eb)"
+            >
+              <title>{`Week of ${week.weekStart.slice(0, 10)}: ${week.runs} CI runs`}</title>
+            </rect>
+          </g>
+        );
+      })}
+      <line
+        x1={padding.left}
+        y1={padding.top + chartHeight}
+        x2={width - padding.right}
+        y2={padding.top + chartHeight}
+        stroke="var(--border-soft)"
+        strokeWidth={1}
+      />
+    </svg>
+  );
+}
 
 function BalanceDonut({ distribution }: { distribution: BalanceSlice[] }) {
   const size = 132;
@@ -173,7 +232,32 @@ export function InsightsPage() {
                 ) : null}
               </AnalyticsPanel>
 
-              <AnalyticsPanel eyebrow="Automation" title="CI/CD Velocity" unavailableReason={analytics.ciCdVelocity.reason} />
+              <AnalyticsPanel
+                eyebrow="Automation"
+                title="CI/CD Velocity"
+                score={analytics.ciCdVelocity.available ? analytics.ciCdVelocity.score : undefined}
+                unavailableReason={analytics.ciCdVelocity.available ? undefined : analytics.ciCdVelocity.reason}
+              >
+                {analytics.ciCdVelocity.available ? (
+                  <div className="velocity-body">
+                    <VelocityChart weeks={analytics.ciCdVelocity.weeks} />
+                    <div className="velocity-legend">
+                      <span className="velocity-legend-item">
+                        <span className="legend-dot" style={{ background: "var(--border-strong, #94a3b8)" }} />
+                        Commits ({analytics.ciCdVelocity.totalCommits})
+                      </span>
+                      <span className="velocity-legend-item">
+                        <span className="legend-dot" style={{ background: "var(--accent, #2563eb)" }} />
+                        CI runs ({analytics.ciCdVelocity.totalRuns})
+                      </span>
+                      <span className="velocity-ratio mono">
+                        {Math.round(analytics.ciCdVelocity.ratio * 100)}% alignment
+                      </span>
+                    </div>
+                    <p className="balance-recommendation">{analytics.ciCdVelocity.recommendation}</p>
+                  </div>
+                ) : null}
+              </AnalyticsPanel>
 
               <AnalyticsPanel eyebrow="Product coverage" title="User Flow Coverage" unavailableReason={analytics.userFlowCoverage.reason} />
             </section>

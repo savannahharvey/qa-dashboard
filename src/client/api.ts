@@ -122,12 +122,26 @@ export type QualityPrinciplesPanel =
   | UnavailablePanel
   | { available: true; score: number; principles: PrincipleResult[]; scannedTests: number };
 
+export type CicdVelocityWeek = { weekStart: string; commits: number; runs: number };
+
+export type CicdVelocityPanel =
+  | UnavailablePanel
+  | {
+      available: true;
+      score: number;
+      ratio: number;
+      totalCommits: number;
+      totalRuns: number;
+      weeks: CicdVelocityWeek[];
+      recommendation: string;
+    };
+
 export type TeamAnalytics = {
   generatedAt: string;
   healthScore: number | null;
   testTypeBalance: TestTypeBalancePanel;
   qualityPrinciples: QualityPrinciplesPanel;
-  ciCdVelocity: UnavailablePanel;
+  ciCdVelocity: CicdVelocityPanel;
   userFlowCoverage: UnavailablePanel;
 };
 
@@ -175,6 +189,42 @@ export function saveMetricSourceConfig(
 export function getAzurePipelines(teamId: string) {
   return requestJson<{ pipelines: AzurePipelineDefinition[]; diagnostics: Diagnostic[] }>(
     `/api/teams/${teamId}/metrics/azure/pipelines`,
+  );
+}
+
+export type GithubConnectivity = {
+  status: "connected" | "error" | "idle";
+  message?: string;
+};
+
+export type GithubIntegrationConfig = {
+  source: "GITHUB";
+  enabled: boolean;
+  settings: { repoUrl: string; branch: string };
+  hasPat: boolean;
+};
+
+export type GithubIntegrationInput = {
+  enabled: boolean;
+  repoUrl: string;
+  branch: string;
+  /** Set to save/replace a PAT, or "" to clear it. Omit to leave the stored PAT untouched. */
+  pat?: string;
+};
+
+export function getGithubIntegration(teamId: string) {
+  return requestJson<{ config: GithubIntegrationConfig | null; status: GithubConnectivity }>(
+    `/api/teams/${teamId}/integrations/github`,
+  );
+}
+
+export function saveGithubIntegration(teamId: string, input: GithubIntegrationInput) {
+  return requestJson<{ ok: true; hasPat: boolean; status: GithubConnectivity }>(
+    `/api/teams/${teamId}/integrations/github`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
   );
 }
 
