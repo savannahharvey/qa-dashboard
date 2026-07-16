@@ -152,17 +152,9 @@ async function fetchAzureMetrics(
   settings: AzureSettings,
 ) {
   const auth = Buffer.from(`:${token}`).toString("base64");
+  const headers = { Authorization: `Basic ${auth}`, Accept: "application/json" };
   const baseUrl = `https://dev.azure.com/${encodeURIComponent(organization)}/${encodeURIComponent(project)}/_apis/test`;
-  const runsResponse = await fetch(`${baseUrl}/runs?api-version=7.1`, {
-    headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
-  });
-
-  if (!runsResponse.ok) {
-    throw new Error("Azure runs request failed");
-  }
-
-  const runsBody = (await runsResponse.json()) as { value?: Array<Record<string, unknown>> };
-  const runs = Array.isArray(runsBody.value) ? runsBody.value : [];
+  const runs = await fetchAzureRuns(baseUrl, headers, settings);
   const metrics: QaMetric[] = [];
   const results: TestRunResultRecord[] = [];
 
@@ -176,7 +168,7 @@ async function fetchAzureMetrics(
 
     const runId = String(run.id ?? "");
     const resultsResponse = await fetch(`${baseUrl}/runs/${encodeURIComponent(runId)}/results?api-version=7.1`, {
-      headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
+      headers,
     });
 
     if (!resultsResponse.ok) {
@@ -202,6 +194,73 @@ async function fetchAzureMetrics(
   return { metrics, results };
 }
 
+// The Query form of the runs endpoint filters by build definition server-side, but only
+// accepts a 7-day window, so we page backwards a few weeks until every category has a run.
+const RUN_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_RUN_WINDOWS = 6;
+
+async function fetchAzureRuns(
+  baseUrl: string,
+  headers: Record<string, string>,
+  settings: AzureSettings,
+): Promise<Array<Record<string, unknown>>> {
+  const buildDefIds = collectBuildDefIds(settings);
+
+  // No pipeline selected ("Any pipeline"): list the most recent runs without a filter.
+  if (buildDefIds.length === 0) {
+    const response = await fetch(`${baseUrl}/runs?api-version=7.1`, { headers });
+    if (!response.ok) {
+      throw new Error("Azure runs request failed");
+    }
+    const body = (await response.json()) as { value?: Array<Record<string, unknown>> };
+    return Array.isArray(body.value) ? body.value : [];
+  }
+
+  // A pipeline is selected: ask Azure to return only that pipeline's runs. The Query endpoint
+  // needs an explicit <=7-day window, so walk backwards week by week and stop as soon as every
+  // category has a matching run (an active pipeline resolves in the first window).
+  const idParam = buildDefIds.join(",");
+  const accumulated: Array<Record<string, unknown>> = [];
+  const now = Date.now();
+
+  for (let window = 0; window < MAX_RUN_WINDOWS; window += 1) {
+    const query = new URLSearchParams({
+      minLastUpdatedDate: new Date(now - (window + 1) * RUN_WINDOW_MS).toISOString(),
+      maxLastUpdatedDate: new Date(now - window * RUN_WINDOW_MS).toISOString(),
+      buildDefIds: idParam,
+      $top: "100",
+      "api-version": "7.1",
+    });
+    const response = await fetch(`${baseUrl}/runs?${query.toString()}`, { headers });
+    if (!response.ok) {
+      throw new Error("Azure runs request failed");
+    }
+    const body = (await response.json()) as { value?: Array<Record<string, unknown>> };
+    accumulated.push(...(Array.isArray(body.value) ? body.value : []));
+
+    if (categories.every((category) => selectRun(accumulated, category, settings))) {
+      break;
+    }
+  }
+
+  return accumulated;
+}
+
+function collectBuildDefIds(settings: AzureSettings): number[] {
+  const ids = new Set<number>();
+  if (typeof settings.buildDefinitionId === "number" && Number.isFinite(settings.buildDefinitionId)) {
+    ids.add(settings.buildDefinitionId);
+  }
+  for (const mapping of Object.values(settings.categoryMap ?? {})) {
+    const id = mapping?.buildDefinitionId;
+    if (typeof id === "number" && Number.isFinite(id)) {
+      ids.add(id);
+    }
+  }
+  // Azure accepts at most 10 build definition ids per query.
+  return [...ids].slice(0, 10);
+}
+
 type AzureTestResult = {
   outcome?: string;
   testCaseTitle?: string;
@@ -223,10 +282,12 @@ function selectRun(runs: Array<Record<string, unknown>>, category: TestCategory,
   return runs.find((run) => {
     const name = String(run.name ?? run.title ?? "").toLowerCase();
     const definitionId = Number(
-      (run.buildConfiguration as { buildDefinitionId?: number } | undefined)?.buildDefinitionId ?? run.buildDefinitionId,
+      (run.buildConfiguration as { buildDefinitionId?: number } | undefined)?.buildDefinitionId ??
+        (run.pipelineReference as { pipelineId?: number } | undefined)?.pipelineId ??
+        run.buildDefinitionId,
     );
-    // The test/runs list endpoint doesn't include buildConfiguration, so definitionId is often
-    // unavailable — only enforce the pipeline filter when we actually have something to compare.
+    // Runs from the Query endpoint are already scoped to the selected pipeline and carry a
+    // definitionId; only enforce the match when we actually have one to compare against.
     const matchesPipeline = !buildDefinitionId || !Number.isFinite(definitionId) || definitionId === buildDefinitionId;
     return name.includes(titleNeedle.toLowerCase()) && matchesPipeline;
   });

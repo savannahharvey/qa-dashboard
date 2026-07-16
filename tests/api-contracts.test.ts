@@ -477,6 +477,39 @@ describe("Azure DevOps metric refresh API contracts", () => {
     );
   });
 
+  it("scopes the Azure runs query to the selected pipeline", async () => {
+    enableAzureConfig({ buildDefinitionId: 2 });
+    const requestedUrls: string[] = [];
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = typeof input === "string" ? input : "url" in input ? input.url : String(input);
+      requestedUrls.push(url);
+      if (url.includes("/_apis/test/runs?")) {
+        return jsonResponse({
+          value: [
+            { id: 10, name: "unit tests", buildConfiguration: { buildDefinitionId: 2 } },
+            { id: 11, name: "api tests", buildConfiguration: { buildDefinitionId: 2 } },
+            { id: 12, name: "ui tests", buildConfiguration: { buildDefinitionId: 2 } },
+          ],
+        });
+      }
+      if (url.includes("/results?")) {
+        return jsonResponse({ value: [{ outcome: "Passed" }] });
+      }
+      return { ok: false, json: async () => ({}) } as Response;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const agent = await signedInMember("azurepipelinescope");
+
+    await agent.post("/api/teams/team-qa/metrics/refresh").send({ source: "azure-devops" }).expect(200);
+
+    const runsUrl = requestedUrls.find((url) => url.includes("/_apis/test/runs?"));
+    expect(runsUrl).toBeDefined();
+    // The pipeline selection must reach Azure as a server-side filter, not just a client-side sort.
+    expect(runsUrl).toContain("buildDefIds=2");
+    expect(runsUrl).toContain("minLastUpdatedDate=");
+    expect(runsUrl).toContain("maxLastUpdatedDate=");
+  });
+
   it("returns unavailable metrics when Azure requests fail", async () => {
     enableAzureConfig();
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, json: async () => ({ message: "nope" }) }) as Response));
