@@ -105,4 +105,46 @@ describe("metric progress", () => {
       currentValue: 0,
     });
   });
+
+  it("uses the pass rate from run counts against a percentage target", () => {
+    const goal = {
+      ...baseGoal,
+      metricType: "TESTS_PASSING",
+      testCategory: "UI",
+      currentValue: 0,
+      targetValue: 100,
+    } as const;
+
+    const metric = {
+      id: "metric-ui-passing",
+      teamId: "team-qa",
+      testSuiteId: "suite-ui",
+      category: "UI",
+      kind: "TESTS_PASSING",
+      status: "PASSING",
+      value: null,
+      unit: null,
+      source: "AZURE_DEVOPS",
+      measuredAt: null,
+      passedTests: 35,
+      failedTests: 0,
+      totalTests: 35,
+      createdAt: "2026-05-09T00:00:00.000Z",
+      updatedAt: "2026-05-09T00:00:00.000Z",
+    } as const;
+
+    expect(calculateGoalProgress(goal, metric)).toMatchObject({
+      available: true,
+      currentValue: 100,
+      targetValue: 100,
+      percent: 100,
+      complete: true,
+    });
+
+    expect(calculateGoalProgress(goal, { ...metric, passedTests: 30 })).toMatchObject({
+      currentValue: 86,
+      percent: 86,
+      complete: false,
+    });
+  });
 });

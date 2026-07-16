@@ -50,8 +50,16 @@ export function calculateGoalProgress(goal: Goal, metric?: QaMetric): MetricProg
   }
 
   if (metric.kind === "TESTS_PASSING") {
+    // Prefer an actual pass rate from the run counts so a 35/35 run reads as 100%
+    // (and a partial run reflects real progress) against a percentage target.
+    if (typeof metric.totalTests === "number" && metric.totalTests > 0 && typeof metric.passedTests === "number") {
+      const passRatePercent = Math.round((metric.passedTests / metric.totalTests) * 100);
+      return calculateNumericProgress(passRatePercent, goal.targetValue);
+    }
+
+    // No counts available: fall back to the pass/fail status, scaled to the goal target.
     if (metric.status === "PASSING") {
-      return calculateNumericProgress(1, goal.targetValue);
+      return calculateNumericProgress(goal.targetValue, goal.targetValue);
     }
 
     if (metric.status === "FAILING") {
